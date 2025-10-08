@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "event-1",
+      "description": "A rock band performing on stage with colorful lights.",
+      "imageUrl": "https://picsum.photos/seed/1/1200/800",
+      "imageHint": "music concert"
+    },
+    {
+      "id": "event-2",
+      "description": "A person coding on a laptop at a hackathon.",
+      "imageUrl": "https://picsum.photos/seed/2/1200/800",
+      "imageHint": "tech workshop"
+    },
+    {
+      "id": "event-3",
+      "description": "An art gallery with modern paintings on the wall.",
+      "imageUrl": "https://picsum.photos/seed/3/1200/800",
+      "imageHint": "art exhibition"
+    },
+    {
+      "id": "event-4",
+      "description": "Students playing basketball on an outdoor court.",
+      "imageUrl": "https://picsum.photos/seed/4/1200/800",
+      "imageHint": "sports game"
+    },
+    {
+      "id": "event-5",
+      "description": "A group of people networking at a social mixer.",
+      "imageUrl": "https://picsum.photos/seed/5/1200/800",
+      "imageHint": "social event"
+    },
+    {
+      "id": "event-6",
+      "description": "A speaker giving a presentation at a conference.",
+      "imageUrl": "https://picsum.photos/seed/6/1200/800",
+      "imageHint": "conference talk"
+    },
+    {
+      "id": "event-7",
+      "description": "A DJ playing music at a party.",
+      "imageUrl": "https://picsum.photos/seed/7/1200/800",
+      "imageHint": "dj party"
+    },
+    {
+      "id": "event-8",
+      "description": "Hands-on pottery workshop.",
+      "imageUrl": "https://picsum.photos/seed/8/1200/800",
+      "imageHint": "pottery workshop"
+    }
+  ]
 }

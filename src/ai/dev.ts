@@ -1,1 +1,5 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/trending-events-display.ts';
+import '@/ai/flows/personalized-event-recommendations.ts';
