@@ -19,9 +19,28 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Confetti from 'react-dom-confetti';
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { cn } from '@/lib/utils';
+
+type ChatMessage = {
+  user: {
+    name: string;
+    avatar: string;
+  };
+  message: string;
+};
+
+const initialMessages: ChatMessage[] = [
+    {
+      user: { name: 'Jane Doe', avatar: 'https://picsum.photos/seed/user2/100/100' },
+      message: 'So excited for this! 🔥',
+    },
+    {
+      user: { name: 'Sam Miller', avatar: 'https://picsum.photos/seed/user3/100/100' },
+      message: 'Is anyone forming a team for the hackathon?',
+    },
+];
 
 export default function EventDetailContent({ id }: { id: string }) {
   const {
@@ -31,6 +50,9 @@ export default function EventDetailContent({ id }: { id: string }) {
     toggleFavorite,
   } = useAppContext();
   const [showConfetti, setShowConfetti] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [newMessage, setNewMessage] = useState('');
+
   const { toast } = useToast();
 
   const event = mockEvents.find((e) => e.id === id);
@@ -66,6 +88,19 @@ export default function EventDetailContent({ id }: { id: string }) {
         title: 'Added to Calendar',
         description: `${event.title} has been added to your calendar.`,
     });
+  };
+
+  const handleSendMessage = (e: FormEvent) => {
+    e.preventDefault();
+    if (newMessage.trim() === '') return;
+
+    const userMessage: ChatMessage = {
+      user: { name: mockUser.name, avatar: mockUser.avatarUrl },
+      message: newMessage,
+    };
+
+    setMessages([...messages, userMessage]);
+    setNewMessage('');
   };
 
 
@@ -114,38 +149,36 @@ export default function EventDetailContent({ id }: { id: string }) {
 
           <h2 className="font-headline text-2xl font-semibold mb-6">Live Chat</h2>
           <div className="space-y-4">
-            <div className="flex gap-3">
-              <Avatar>
-                <AvatarImage src="https://picsum.photos/seed/user2/100/100" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-sm font-medium">Jane Doe</p>
-                <p className="text-sm text-muted-foreground">So excited for this! 🔥</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Avatar>
-                <AvatarImage src="https://picsum.photos/seed/user3/100/100" />
-                <AvatarFallback>SM</AvatarFallback>
-              </Avatar>
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-sm font-medium">Sam Miller</p>
-                <p className="text-sm text-muted-foreground">Is anyone forming a team for the hackathon?</p>
-              </div>
-            </div>
-             <div className="flex gap-3 items-center mt-4">
+            {messages.map((chat, index) => (
+              <div key={index} className="flex gap-3">
                 <Avatar>
-                    <AvatarImage src={mockUser.avatarUrl} />
-                    <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={chat.user.avatar} />
+                  <AvatarFallback>{chat.user.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div className="relative w-full">
-                    <Input placeholder="Type a message..." className="pr-12" />
-                    <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
-                        <Send className="h-4 w-4"/>
-                    </Button>
+                <div className="rounded-lg bg-muted p-3">
+                  <p className="text-sm font-medium">{chat.user.name}</p>
+                  <p className="text-sm text-muted-foreground">{chat.message}</p>
                 </div>
-            </div>
+              </div>
+            ))}
+
+            <form onSubmit={handleSendMessage} className="flex gap-3 items-center mt-4">
+              <Avatar>
+                  <AvatarImage src={mockUser.avatarUrl} />
+                  <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <div className="relative w-full">
+                  <Input 
+                    placeholder="Type a message..." 
+                    className="pr-12"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                  />
+                  <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
+                      <Send className="h-4 w-4"/>
+                  </Button>
+              </div>
+            </form>
           </div>
 
         </div>
