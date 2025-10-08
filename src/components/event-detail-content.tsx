@@ -20,9 +20,17 @@ import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Confetti from 'react-dom-confetti';
 import { useState } from 'react';
+import { useAppContext } from '@/context/app-context';
+import { cn } from '@/lib/utils';
 
 export default function EventDetailContent({ id }: { id: string }) {
-  const [isRsvpd, setIsRsvpd] = useState(false);
+  const {
+    isRsvpd: isEventRsvpd,
+    addRsvp,
+    isFavorite,
+    toggleFavorite,
+  } = useAppContext();
+  const [showConfetti, setShowConfetti] = useState(false);
   const { toast } = useToast();
 
   const event = mockEvents.find((e) => e.id === id);
@@ -31,14 +39,35 @@ export default function EventDetailContent({ id }: { id: string }) {
     notFound();
   }
 
+  const hasRsvpd = isEventRsvpd(event.id);
+  const isEventFavorite = isFavorite(event.id);
+
   const handleRsvp = () => {
-    setIsRsvpd(true);
+    if (hasRsvpd) return;
+    addRsvp(event.id);
+    setShowConfetti(true);
     toast({
       title: '🎉 RSVP Successful!',
       description: `You're going to ${event.title}.`,
     });
-    setTimeout(() => setIsRsvpd(false), 3000); // Reset confetti
+    setTimeout(() => setShowConfetti(false), 3000); // Reset confetti
   };
+
+  const handleFavoriteClick = () => {
+    toggleFavorite(event.id);
+    toast({
+      title: isEventFavorite ? 'Removed from Favorites' : 'Added to Favorites',
+      description: `${event.title} has been ${isEventFavorite ? 'removed from' : 'added to'} your favorites.`,
+    });
+  };
+
+  const handleAddToCalendar = () => {
+    toast({
+        title: 'Added to Calendar',
+        description: `${event.title} has been added to your calendar.`,
+    });
+  };
+
 
   const confettiConfig = {
     angle: 90,
@@ -123,15 +152,17 @@ export default function EventDetailContent({ id }: { id: string }) {
         <div className="lg:col-span-1 space-y-6">
           <div className="p-6 rounded-2xl bg-background/60 dark:bg-card/60 backdrop-blur-xl border-border/20 shadow-lg">
             <div className="flex justify-center">
-                <Confetti active={isRsvpd} config={confettiConfig} />
+                <Confetti active={showConfetti} config={confettiConfig} />
             </div>
-            <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvp}>RSVP Now</Button>
+            <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvp} disabled={hasRsvpd}>
+                {hasRsvpd ? "You're going!" : "RSVP Now"}
+            </Button>
             <div className="flex justify-around text-center">
-              <Button variant="ghost" className="flex flex-col h-auto gap-1">
-                <Heart className="h-6 w-6" />
+              <Button variant="ghost" className="flex flex-col h-auto gap-1" onClick={handleFavoriteClick}>
+                <Heart className={cn("h-6 w-6", isEventFavorite && "text-destructive fill-destructive")} />
                 <span>Favorite</span>
               </Button>
-              <Button variant="ghost" className="flex flex-col h-auto gap-1">
+              <Button variant="ghost" className="flex flex-col h-auto gap-1" onClick={handleAddToCalendar}>
                 <CalendarPlus className="h-6 w-6" />
                 <span>Add to Calendar</span>
               </Button>
@@ -161,7 +192,7 @@ export default function EventDetailContent({ id }: { id: string }) {
              <div className="flex items-start gap-4">
               <Users className="h-5 w-5 mt-1 text-primary" />
               <div>
-                <p className="font-semibold">{event.participants} people are going</p>
+                <p className="font-semibold">{event.participants + (hasRsvpd ? 1 : 0)} people are going</p>
               </div>
             </div>
           </div>

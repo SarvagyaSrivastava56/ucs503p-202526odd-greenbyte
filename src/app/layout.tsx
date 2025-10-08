@@ -3,6 +3,7 @@ import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AppProvider } from '@/context/app-context';
 
 export const metadata: Metadata = {
   title: 'CampusConnect',
@@ -26,8 +27,10 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased')}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
-          <Toaster />
+          <AppProvider>
+            {children}
+            <Toaster />
+          </AppProvider>
         </ThemeProvider>
       </body>
     </html>
