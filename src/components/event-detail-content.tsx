@@ -22,6 +22,7 @@ import Confetti from 'react-dom-confetti';
 import { useState, FormEvent } from 'react';
 import { useAppContext } from '@/context/app-context';
 import { cn } from '@/lib/utils';
+import type { Event } from '@/lib/types';
 
 type ChatMessage = {
   user: {
@@ -56,7 +57,7 @@ export default function EventDetailContent({ id }: { id: string }) {
 
   const { toast } = useToast();
 
-  const event = mockEvents.find((e) => e.id === id);
+  const event : Event | undefined = mockEvents.find((e) => e.id === id);
 
   if (!event) {
     notFound();
@@ -127,7 +128,7 @@ export default function EventDetailContent({ id }: { id: string }) {
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="relative w-full h-64 md:h-96 rounded-2xl overflow-hidden shadow-2xl mb-8">
         <Image
-          src={event.imageUrl}
+          src={event.bannerUrl}
           alt={event.title}
           fill
           className="object-cover"
@@ -140,7 +141,7 @@ export default function EventDetailContent({ id }: { id: string }) {
           <h1 className="font-headline text-3xl md:text-5xl font-bold">
             {event.title}
           </h1>
-          <p className="text-lg">Hosted by {event.club}</p>
+          <p className="text-lg">Hosted by a society</p>
         </div>
       </div>
 
@@ -215,25 +216,25 @@ export default function EventDetailContent({ id }: { id: string }) {
             <div className="flex items-start gap-4">
               <Calendar className="h-5 w-5 mt-1 text-primary" />
               <div>
-                <p className="font-semibold">{new Date(event.date).toLocaleDateString('en-US', { dateStyle: 'full' })}</p>
+                <p className="font-semibold">{new Date(event.startAt).toLocaleDateString('en-US', { dateStyle: 'full' })}</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <Clock className="h-5 w-5 mt-1 text-primary" />
               <div>
-                <p className="font-semibold">{event.time}</p>
+                <p className="font-semibold">{new Date(event.startAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
               <MapPin className="h-5 w-5 mt-1 text-primary" />
               <div>
-                <p className="font-semibold">{event.location}</p>
+                <p className="font-semibold">{event.venue}</p>
               </div>
             </div>
              <div className="flex items-start gap-4">
               <Users className="h-5 w-5 mt-1 text-primary" />
               <div>
-                <p className="font-semibold">{event.participants + (hasRsvpd ? 1 : 0)} people are going</p>
+                <p className="font-semibold">{(event.counters?.rsvpCount || 0) + (hasRsvpd ? 1 : 0)} people are going</p>
               </div>
             </div>
           </div>
