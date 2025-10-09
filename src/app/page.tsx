@@ -4,7 +4,6 @@ import DashboardContent from '@/components/dashboard-content';
 import { useAppContext } from '@/context/app-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import {mockUsers} from "@/lib/mock-data";
 
 export default function Home() {
   const { currentUser } = useAppContext();
@@ -19,9 +18,6 @@ export default function Home() {
   if (!currentUser) {
     return null; // Or a loading spinner
   }
-
-  // To preserve the original mock user behavior for existing components
-  const mockUser = mockUsers.find(user => user.email === 'student@example.com')!;
   
   if (currentUser.role === 'society') {
     router.replace('/society-dashboard');

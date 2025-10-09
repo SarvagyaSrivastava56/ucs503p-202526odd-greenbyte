@@ -1,6 +1,6 @@
 'use client';
 
-import { mockEvents, mockUser } from '@/lib/mock-data';
+import { mockEvents } from '@/lib/mock-data';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import {
@@ -48,6 +48,7 @@ export default function EventDetailContent({ id }: { id: string }) {
     addRsvp,
     isFavorite,
     toggleFavorite,
+    currentUser,
   } = useAppContext();
   const [showConfetti, setShowConfetti] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -92,10 +93,10 @@ export default function EventDetailContent({ id }: { id: string }) {
 
   const handleSendMessage = (e: FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === '') return;
+    if (newMessage.trim() === '' || !currentUser) return;
 
     const userMessage: ChatMessage = {
-      user: { name: mockUser.name, avatar: mockUser.avatarUrl },
+      user: { name: currentUser.name, avatar: currentUser.avatarUrl },
       message: newMessage,
     };
 
@@ -116,6 +117,11 @@ export default function EventDetailContent({ id }: { id: string }) {
     height: '10px',
     colors: ['#a864fd', '#29cdff', '#78ff44', '#ff718d', '#fdff6a'],
   };
+  
+  const userInitials = currentUser?.name
+    .split(' ')
+    .map((n) => n[0])
+    .join('');
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -162,23 +168,25 @@ export default function EventDetailContent({ id }: { id: string }) {
               </div>
             ))}
 
-            <form onSubmit={handleSendMessage} className="flex gap-3 items-center mt-4">
-              <Avatar>
-                  <AvatarImage src={mockUser.avatarUrl} />
-                  <AvatarFallback>{mockUser.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="relative w-full">
-                  <Input 
-                    placeholder="Type a message..." 
-                    className="pr-12"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                  />
-                  <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
-                      <Send className="h-4 w-4"/>
-                  </Button>
-              </div>
-            </form>
+            {currentUser && (
+              <form onSubmit={handleSendMessage} className="flex gap-3 items-center mt-4">
+                <Avatar>
+                    <AvatarImage src={currentUser.avatarUrl} />
+                    <AvatarFallback>{userInitials}</AvatarFallback>
+                </Avatar>
+                <div className="relative w-full">
+                    <Input 
+                      placeholder="Type a message..." 
+                      className="pr-12"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                    />
+                    <Button type="submit" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8">
+                        <Send className="h-4 w-4"/>
+                    </Button>
+                </div>
+              </form>
+            )}
           </div>
 
         </div>
