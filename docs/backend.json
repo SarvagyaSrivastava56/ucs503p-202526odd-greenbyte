@@ -1,0 +1,347 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile in the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "User's full name."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL of the user's avatar image.",
+          "format": "uri"
+        },
+        "role": {
+          "type": "string",
+          "description": "User's role (Student or Admin)."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "name",
+        "role"
+      ]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event on the campus.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the event."
+        },
+        "hostId": {
+          "type": "string",
+          "description": "Reference to SocietyProfile. (Relationship: SocietyProfile 1:N Event)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the event."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the event."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the event."
+        },
+        "dateTime": {
+          "type": "string",
+          "description": "Date and time of the event.",
+          "format": "date-time"
+        },
+        "venue": {
+          "type": "string",
+          "description": "Venue of the event."
+        },
+        "bannerUrl": {
+          "type": "string",
+          "description": "URL of the event banner image.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "hostId",
+        "title",
+        "description",
+        "category",
+        "dateTime",
+        "venue",
+        "bannerUrl"
+      ]
+    },
+    "Rsvp": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Rsvp",
+      "type": "object",
+      "description": "Represents a user's RSVP to an event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RSVP."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to Event. (Relationship: Event 1:N Rsvp)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Rsvp)"
+        },
+        "rsvpTime": {
+          "type": "string",
+          "description": "Time when the user RSVPed.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "eventId",
+        "userId",
+        "rsvpTime"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a chat message within an event chatroom.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the chat message."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to Event. (Relationship: Event 1:N ChatMessage)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ChatMessage)"
+        },
+        "message": {
+          "type": "string",
+          "description": "Text content of the chat message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "eventId",
+        "userId",
+        "message",
+        "timestamp"
+      ]
+    },
+    "FavoriteEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FavoriteEvent",
+      "type": "object",
+      "description": "Represents a user's favorite event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the favorite event entry."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to Event. (Relationship: Event 1:N FavoriteEvent)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N FavoriteEvent)"
+        }
+      },
+      "required": [
+        "id",
+        "eventId",
+        "userId"
+      ]
+    },
+    "SocietyProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SocietyProfile",
+      "type": "object",
+      "description": "Represents a society profile in the application. Societies can host events.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the society profile."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the society."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the society."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL of the society's logo.",
+          "format": "uri"
+        },
+        "adminUserId": {
+          "type": "string",
+          "description": "Reference to UserProfile. The user ID of the admin for this society. (Relationship: UserProfile 1:1 SocietyProfile)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "logoUrl",
+        "adminUserId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profiles. The 'userId' parameter is the Firebase Auth UID.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user, matching the Firebase Auth UID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "societyProfiles/{societyId}",
+        "definition": {
+          "entityName": "SocietyProfile",
+          "schema": {
+            "$ref": "#/backend/entities/SocietyProfile"
+          },
+          "description": "Stores society profiles. Includes an 'adminUserId' field referencing the user who administers the Society.",
+          "params": [
+            {
+              "name": "societyId",
+              "description": "The unique identifier for the society."
+            }
+          ]
+        }
+      },
+      {
+        "path": "societyProfiles/{societyId}/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/backend/entities/Event"
+          },
+          "description": "Stores events hosted by societies. Includes denormalized 'hostId' (societyId) for authorization independence.",
+          "params": [
+            {
+              "name": "societyId",
+              "description": "The unique identifier for the society hosting the event."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier for the event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/rsvps/{rsvpId}",
+        "definition": {
+          "entityName": "Rsvp",
+          "schema": {
+            "$ref": "#/backend/entities/Rsvp"
+          },
+          "description": "Stores user RSVPs to events.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "rsvpId",
+              "description": "The unique identifier for the RSVP."
+            }
+          ]
+        }
+      },
+      {
+        "path": "societyProfiles/{societyId}/events/{eventId}/chatMessages/{chatMessageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores chat messages for each event.",
+          "params": [
+            {
+              "name": "societyId",
+              "description": "The unique identifier for the society hosting the event."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier for the event."
+            },
+            {
+              "name": "chatMessageId",
+              "description": "The unique identifier for the chat message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/favoriteEvents/{favoriteEventId}",
+        "definition": {
+          "entityName": "FavoriteEvent",
+          "schema": {
+            "$ref": "#/backend/entities/FavoriteEvent"
+          },
+          "description": "Stores user's favorite events.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "favoriteEventId",
+              "description": "The unique identifier for the favorite event entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the CampusConnect application, emphasizing secure, scalable, and easily maintainable data access patterns. The design prioritizes authorization independence through data denormalization, ensuring that security rules can be enforced without relying on complex hierarchical `get()` calls. Structural segregation is used to group data with similar access requirements, simplifying security rules and improving query performance. Access modeling follows a consistent pattern, utilizing path-based ownership for private user data and membership maps for collaborative data. The structure facilitates simple list operations (QAPs) and maintains data invariants such as ownership and timestamps.\n\n**Authorization Independence:**\n*   Society admins are linked to their societies through the `societyProfiles/{societyId}` document. The `adminUserId` field in `societyProfiles` indicates the user who administers the Society. The `events` subcollection under `societyProfiles` includes a denormalized `hostId` field that allows security rules to verify the event's host without additional `get()` calls.\n*   Rsvps and FavoriteEvents are created using the user's id in a nested collection under `/users/{userId}`. This approach allows checking user ownership of the rsvp/favoriteEvent document.\n\n**Structural Segregation:**\n*   User profiles are stored in a dedicated collection (`users/{userId}`) to separate user-specific data from other application data. This segregation simplifies user-related security rules.\n*   Events are stored as subcollections under `societyProfiles/{societyId}/events/{eventId}`, which allows specific security rules to be applied for event creation, modification, and deletion by society admins.\n\n**Access Modeling:**\n*   Path-Based Ownership: User-specific data (RSVPs and FavoriteEvents) is stored under the `/users/{userId}` path, ensuring that only the user can access their own data.\n*   Membership Map: The `adminUserId` field in the `societyProfiles` collection is used to determine society administrators, allowing only admins to manage their societies' events.\n\n**QAPs (Rules are not Filters):**\n*   The separation of user-specific data and event data, along with the denormalized `hostId` field in the `events` collection, allows secure list operations for events and RSVPs, enabling efficient filtering without exposing sensitive data.\n\n**Invariants:**\n*   The use of specific user and society IDs in the paths ensures the integrity of ownership and relationships between users, societies, and events. Timestamps can be added to documents to track creation and modification times, maintaining data integrity."
+  }
+}

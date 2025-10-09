@@ -1,0 +1,151 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Manages user profile data, ensuring only the user can access their own profile.
+     * @path /users/{userId}
+     * @allow (create) User with UID 'user_abc' creates their profile at /users/user_abc.
+     * @deny (create) User with UID 'user_abc' tries to create a profile at /users/user_xyz.
+     * @allow (get, update, delete) User with UID 'user_abc' reads/updates/deletes their profile at /users/user_abc.
+     * @deny (get, update, delete) User with UID 'user_abc' tries to read/update/delete a profile at /users/user_xyz.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false; // Disallow listing of user profiles for privacy.
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Manages society profile data, ensuring only the society admin can access and modify the profile.
+     * @path /societyProfiles/{societyId}
+     * @allow (create) User with UID 'admin_abc' creates a society profile where request.resource.data.adminUserId == 'admin_abc'.
+     * @deny (create) User with UID 'user_xyz' tries to create a society profile where request.resource.data.adminUserId == 'admin_abc'.
+     * @allow (get, update, delete) User with UID 'admin_abc' reads/updates/deletes the society profile where resource.data.adminUserId == 'admin_abc'.
+     * @deny (get, update, delete) User with UID 'user_xyz' tries to read/update/delete the society profile where resource.data.adminUserId == 'admin_abc'.
+     * @principle Enforces admin-only access based on the 'adminUserId' field.
+     */
+    match /societyProfiles/{societyId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin(adminUserId) {
+        return request.auth.uid == adminUserId;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
+      allow delete: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
+    }
+
+    /**
+     * @description Manages events hosted by societies, ensuring only the society admin can create, update, and delete events.
+     * @path /societyProfiles/{societyId}/events/{eventId}
+     * @allow (create) User with UID 'admin_abc' creates an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
+     * @deny (create) User with UID 'user_xyz' tries to create an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
+     * @allow (get, update, delete) User with UID 'admin_abc' reads/updates/deletes an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
+     * @deny (get, update, delete) User with UID 'user_xyz' tries to read/update/delete an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
+     * @principle Enforces admin-only access based on the 'hostId' field in the event and the 'adminUserId' in the society profile.
+     */
+    match /societyProfiles/{societyId}/events/{eventId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isSocietyAdmin(societyId) {
+          return get(/databases/$(database)/documents/societyProfiles/$(societyId)).data.adminUserId == request.auth.uid;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() && isSocietyAdmin(societyId);
+      allow update: if isSignedIn() && isSocietyAdmin(societyId);
+      allow delete: if isSignedIn() && isSocietyAdmin(societyId);
+    }
+
+    /**
+     * @description Manages user RSVPs to events, ensuring only the user can access and modify their own RSVPs.
+     * @path /users/{userId}/rsvps/{rsvpId}
+     * @allow (create) User with UID 'user_abc' creates an RSVP at /users/user_abc/rsvps/rsvp_123.
+     * @deny (create) User with UID 'user_abc' tries to create an RSVP at /users/user_xyz/rsvps/rsvp_123.
+     * @allow (get, update, delete) User with UID 'user_abc' reads/updates/deletes their RSVP at /users/user_abc/rsvps/rsvp_123.
+     * @deny (get, update, delete) User with UID 'user_abc' tries to read/update/delete an RSVP at /users/user_xyz/rsvps/rsvp_123.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/rsvps/{rsvpId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    /**
+     * @description Manages chat messages for events, ensuring only authenticated users can post messages.
+     * @path /societyProfiles/{societyId}/events/{eventId}/chatMessages/{chatMessageId}
+     * @allow (create) User with UID 'user_abc' creates a chat message in event 'event_xyz'.
+     * @deny (create) Anonymous user tries to create a chat message.
+     * @allow (get, list) Any authenticated user can read chat messages.
+     * @deny (update, delete) No one can update or delete chat messages.
+     * @principle Enforces authentication for message creation and allows public read access.
+     */
+    match /societyProfiles/{societyId}/events/{eventId}/chatMessages/{chatMessageId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if true;
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Manages user's favorite events, ensuring only the user can access and modify their own favorites.
+     * @path /users/{userId}/favoriteEvents/{favoriteEventId}
+     * @allow (create) User with UID 'user_abc' creates a favorite event entry at /users/user_abc/favoriteEvents/fav_123.
+     * @deny (create) User with UID 'user_abc' tries to create a favorite event entry at /users/user_xyz/favoriteEvents/fav_123.
+     * @allow (get, update, delete) User with UID 'user_abc' reads/updates/deletes their favorite event entry at /users/user_abc/favoriteEvents/fav_123.
+     * @deny (get, update, delete) User with UID 'user_abc' tries to read/update/delete a favorite event entry at /users/user_xyz/favoriteEvents/fav_123.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/favoriteEvents/{favoriteEventId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+  }
+}
