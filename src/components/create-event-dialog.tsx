@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -203,7 +204,7 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
             />
              {bannerUrl && z.string().url().safeParse(bannerUrl).success && (
               <div className="relative w-full h-48 rounded-md overflow-hidden">
-                <Image src={bannerUrl} alt="Banner preview" layout="fill" objectFit="cover" />
+                <Image src={bannerUrl} alt="Banner preview" fill style={{objectFit: 'cover'}} />
               </div>
             )}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -474,3 +475,5 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
     </Dialog>
   );
 }
+
+    
