@@ -1,13 +1,19 @@
+
+'use client';
 import { EventCard } from '@/components/event-card';
 import { EventFilters } from '@/components/event-filters';
-import RecommendedEvents from '@/components/recommended-events';
-import TrendingEvents from '@/components/trending-events';
 import { mockEvents } from '@/lib/mock-data';
 import { Separator } from './ui/separator';
 import { CreateEventFab } from './create-event-fab';
 import { useAppContext } from '@/context/app-context';
+import React from 'react';
 
-export default function DashboardContent() {
+type DashboardContentProps = {
+  trendingEvents: React.ReactNode;
+  recommendedEvents: React.ReactNode;
+};
+
+export default function DashboardContent({ trendingEvents, recommendedEvents }: DashboardContentProps) {
   const { currentUser } = useAppContext();
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -15,11 +21,11 @@ export default function DashboardContent() {
         Welcome to CampusConnect!
       </h1>
       
-      <TrendingEvents />
+      {trendingEvents}
 
       <Separator className="my-8" />
       
-      <RecommendedEvents />
+      {recommendedEvents}
 
       <Separator className="my-8" />
 
