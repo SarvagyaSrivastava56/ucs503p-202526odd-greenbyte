@@ -1,13 +1,25 @@
 
 import type { Event, User } from './types';
 
-export const mockUser: User = {
-  id: 'user-1',
-  name: 'Alex Doe',
-  email: 'alex.doe@example.com',
-  avatarUrl: 'https://picsum.photos/seed/user1/100/100',
-  role: 'admin',
-};
+export const mockUsers: User[] = [
+  {
+    id: 'user-1',
+    name: 'Alex Doe',
+    email: 'student@example.com',
+    avatarUrl: 'https://picsum.photos/seed/user1/100/100',
+    role: 'student',
+    password: 'password',
+  },
+  {
+    id: 'user-2',
+    name: 'Music Society',
+    email: 'society@example.com',
+    avatarUrl: 'https://picsum.photos/seed/user2/100/100',
+    role: 'society',
+    password: 'password',
+  }
+];
+
 
 export const mockEvents: Event[] = [
   {

@@ -2,12 +2,13 @@ import { EventCard } from '@/components/event-card';
 import { EventFilters } from '@/components/event-filters';
 import RecommendedEvents from '@/components/recommended-events';
 import TrendingEvents from '@/components/trending-events';
-import { mockEvents, mockUser } from '@/lib/mock-data';
+import { mockEvents } from '@/lib/mock-data';
 import { Separator } from './ui/separator';
 import { CreateEventFab } from './create-event-fab';
+import { useAppContext } from '@/context/app-context';
 
 export default function DashboardContent() {
-  const user = mockUser;
+  const { currentUser } = useAppContext();
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="font-headline text-3xl font-bold tracking-tight mb-6">
@@ -31,7 +32,7 @@ export default function DashboardContent() {
           ))}
         </div>
       </div>
-      {user.role === 'admin' && <CreateEventFab />}
+      {currentUser?.role === 'society' && <CreateEventFab />}
     </div>
   );
 }

@@ -15,26 +15,45 @@ import {
   User,
   Settings,
   Star,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAppContext } from '@/context/app-context';
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const { currentUser } = useAppContext();
 
-  const menuItems = [
+  const commonMenuItems = [
     { href: '/', icon: Home, label: 'Home', tooltip: 'Home' },
     { href: '/explore', icon: Compass, label: 'Explore', tooltip: 'Explore' },
+  ];
+
+  const studentMenuItems = [
+    ...commonMenuItems,
     { href: '/my-events', icon: CalendarCheck, label: 'My Events', tooltip: 'My Events' },
     { href: '/favorites', icon: Star, label: 'Favorites', tooltip: 'Favorites' },
   ];
+  
+  const societyMenuItems = [
+    { href: '/society-dashboard', icon: LayoutDashboard, label: 'Dashboard', tooltip: 'Dashboard' },
+    ...commonMenuItems
+  ];
+
+  const menuItems = currentUser?.role === 'society' ? societyMenuItems : studentMenuItems;
 
   const footerItems = [
     { href: '/profile', icon: User, label: 'Profile', tooltip: 'Profile' },
     { href: '/settings', icon: Settings, label: 'Settings', tooltip: 'Settings' },
   ];
+
+  // Hide sidebar on login/signup pages
+  if (pathname === '/login' || pathname === '/signup') {
+    return null;
+  }
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
@@ -64,7 +83,7 @@ export default function AppSidebar() {
       </SidebarMenu>
       <Separator />
       <SidebarFooter className="p-2">
-        {footerItems.map((item) => (
+        {currentUser && footerItems.map((item) => (
            <SidebarMenuItem key={item.href}>
              <Link href={item.href} passHref>
                 <SidebarMenuButton
