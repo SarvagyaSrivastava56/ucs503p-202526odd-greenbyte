@@ -202,7 +202,7 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
                 </FormItem>
               )}
             />
-            {bannerUrl && z.string().url().safeParse(bannerUrl).success && (
+            {z.string().url().safeParse(bannerUrl).success && (
               <div className="relative w-full h-48 rounded-md overflow-hidden">
                 <Image src={bannerUrl} alt="Banner preview" fill style={{objectFit: 'cover'}} />
               </div>
@@ -475,3 +475,5 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
     </Dialog>
   );
 }
+
+    
