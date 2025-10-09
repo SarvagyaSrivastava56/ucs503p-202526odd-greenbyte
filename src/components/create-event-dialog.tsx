@@ -475,5 +475,3 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
     </Dialog>
   );
 }
-
-    
