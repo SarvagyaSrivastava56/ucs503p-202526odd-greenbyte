@@ -64,7 +64,7 @@ const categories: Category[] = [
 const eventFormSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   description: z.string().min(10, 'Description must be at least 10 characters.'),
-  bannerUrl: z.string().url('Please enter a valid image URL.'),
+  bannerUrl: z.string().url('Please enter a valid image URL.').or(z.literal('')),
   category: z.enum(categories),
   startAt: z.date({ required_error: "A start date and time is required." }),
   endAt: z.date({ required_error: "An end date and time is required." }),
@@ -75,6 +75,9 @@ const eventFormSchema = z.object({
   isPaid: z.boolean().default(false),
   price: z.coerce.number().min(0).optional().default(0),
   status: z.enum(['draft', 'published', 'archived']).default('published'),
+}).refine(data => !data.bannerUrl || z.string().url().safeParse(data.bannerUrl).success, {
+  message: 'Please enter a valid image URL.',
+  path: ['bannerUrl'],
 }).refine(data => data.endAt > data.startAt, {
   message: "End date must be after start date.",
   path: ["endAt"],
@@ -198,7 +201,7 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
                 </FormItem>
               )}
             />
-             {bannerUrl && (
+             {bannerUrl && z.string().url().safeParse(bannerUrl).success && (
               <div className="relative w-full h-48 rounded-md overflow-hidden">
                 <Image src={bannerUrl} alt="Banner preview" layout="fill" objectFit="cover" />
               </div>
@@ -471,3 +474,5 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
     </Dialog>
   );
 }
+
+    
