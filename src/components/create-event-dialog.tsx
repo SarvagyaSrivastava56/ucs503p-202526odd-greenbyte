@@ -47,6 +47,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { saveEvent } from '@/lib/events';
 import { useAppContext } from '@/context/app-context';
+import Image from 'next/image';
 
 const categories: Category[] = [
   'Music',
@@ -106,6 +107,7 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
   
   const isPaid = form.watch('isPaid');
   const isOnline = form.watch('isOnline');
+  const bannerUrl = form.watch('bannerUrl');
 
   useEffect(() => {
     if (eventToEdit) {
@@ -196,6 +198,11 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
                 </FormItem>
               )}
             />
+             {bannerUrl && (
+              <div className="relative w-full h-48 rounded-md overflow-hidden">
+                <Image src={bannerUrl} alt="Banner preview" layout="fill" objectFit="cover" />
+              </div>
+            )}
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <FormField
                 control={form.control}
