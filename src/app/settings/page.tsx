@@ -8,9 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/components/theme-provider';
+import { useAppContext } from '@/context/app-context';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { notificationsEnabled, toggleNotifications } = useAppContext();
 
   return (
     <MainLayout>
@@ -61,10 +63,10 @@ export default function SettingsPage() {
                 <Label htmlFor="push-notifications" className="flex flex-col space-y-1">
                   <span>Push Notifications</span>
                   <span className="font-normal leading-snug text-muted-foreground">
-                    Get push notifications on your device.
+                    Get push notifications on your device for event reminders and announcements.
                   </span>
                 </Label>
-                <Switch id="push-notifications" />
+                <Switch id="push-notifications" checked={notificationsEnabled} onCheckedChange={toggleNotifications} />
               </div>
             </CardContent>
           </Card>

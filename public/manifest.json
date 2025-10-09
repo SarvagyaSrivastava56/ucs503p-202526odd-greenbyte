@@ -1,0 +1,8 @@
+{
+    "name": "CampusConnect",
+    "short_name": "CampusConnect",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#FBE9E7",
+    "theme_color": "#FF7043"
+}

@@ -5,10 +5,12 @@ import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppProvider } from '@/context/app-context';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { PushNotifications } from '@/components/push-notifications';
 
 export const metadata: Metadata = {
   title: 'CampusConnect',
   description: 'Your central hub for campus events.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -30,6 +32,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
             <AppProvider>
+              <PushNotifications />
               {children}
               <Toaster />
             </AppProvider>

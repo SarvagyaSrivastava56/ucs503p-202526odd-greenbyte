@@ -16,6 +16,8 @@ type AppContextType = {
   isRsvpd: (eventId: string) => boolean;
   toggleFavorite: (eventId: string) => void;
   isFavorite: (eventId: string) => boolean;
+  notificationsEnabled: boolean;
+  toggleNotifications: () => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -24,13 +26,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [rsvpEvents, setRsvpEvents] = useState<string[]>([]);
   const [favoriteEvents, setFavoriteEvents] = useState<string[]>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // This is a mock persistence layer. In a real app, you'd use localStorage or a server.
     const loggedInUser = sessionStorage.getItem('currentUser');
     if (loggedInUser) {
       setCurrentUser(JSON.parse(loggedInUser));
+    }
+    const notificationsPref = localStorage.getItem('notificationsEnabled');
+    if (notificationsPref) {
+        setNotificationsEnabled(JSON.parse(notificationsPref));
     }
   }, []);
 
@@ -65,7 +71,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...userData,
       avatarUrl: `https://picsum.photos/seed/user${Date.now()}/100/100`,
     };
-    mockUsers.push(newUser); // In a real app, this would be an API call
+    mockUsers.push(newUser);
     return newUser;
   };
 
@@ -89,6 +95,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return favoriteEvents.includes(eventId);
   };
 
+  const toggleNotifications = () => {
+    const newStatus = !notificationsEnabled;
+    setNotificationsEnabled(newStatus);
+    localStorage.setItem('notificationsEnabled', JSON.stringify(newStatus));
+  };
+
+
   return (
     <AppContext.Provider
       value={{
@@ -102,6 +115,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isRsvpd,
         toggleFavorite,
         isFavorite,
+        notificationsEnabled,
+        toggleNotifications,
       }}
     >
       {children}
