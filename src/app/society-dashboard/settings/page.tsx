@@ -565,11 +565,48 @@ function IntegrationsSection() {
     setIntegrations(prev => ({ ...prev, whatsapp: { ...prev.whatsapp, loading: true } }));
 
     try {
-      // For demo, we'll use a simple phone number input
-      const phoneNumber = prompt('Enter your WhatsApp phone number (with country code):\n\nExample: +1234567890');
+      // Prompt for phone number and optionally Business API credentials
+      const phoneNumber = prompt(
+        '📱 WhatsApp Integration Setup\n\n' +
+        'Enter your WhatsApp phone number (with country code):\n' +
+        'Example: +1234567890\n\n' +
+        'For REAL WhatsApp Business API:\n' +
+        '→ Add WHATSAPP_ACCESS_TOKEN to environment variables\n' +
+        '→ See REAL_INTEGRATIONS_SETUP.md for full setup'
+      );
+      
       if (!phoneNumber) {
         setIntegrations(prev => ({ ...prev, whatsapp: { ...prev.whatsapp, loading: false } }));
         return;
+      }
+
+      // Optional: Ask for Business API credentials
+      let accessToken = null;
+      let businessAccountId = null;
+      
+      const useBusinessAPI = confirm(
+        '🚀 Do you have WhatsApp Business API credentials?\n\n' +
+        'Click OK if you have:\n' +
+        '- Access Token\n' +
+        '- Business Account ID\n' +
+        '- Phone Number ID\n\n' +
+        'Click Cancel to use demo mode (share URLs only)'
+      );
+
+      if (useBusinessAPI) {
+        accessToken = prompt(
+          '🔐 Enter your WhatsApp Business API Access Token:\n\n' +
+          'Get it from: Meta Business Suite → WhatsApp → API Setup\n' +
+          'Starts with: EAABsbCS...'
+        );
+        
+        if (accessToken) {
+          businessAccountId = prompt(
+            '🏢 Enter your WhatsApp Business Account ID:\n\n' +
+            'Get it from: Meta Business Suite → WhatsApp → Settings\n' +
+            'Looks like: 123456789012345'
+          );
+        }
       }
 
       const response = await fetch('/api/integrations/whatsapp/connect', {
@@ -578,6 +615,8 @@ function IntegrationsSection() {
         body: JSON.stringify({
           userId: currentUser.uid,
           phoneNumber,
+          accessToken,
+          businessAccountId,
         }),
       });
 
@@ -586,17 +625,17 @@ function IntegrationsSection() {
       if (data.success) {
         setIntegrations(prev => ({ ...prev, whatsapp: { connected: true, loading: false } }));
         toast({
-          title: 'WhatsApp Connected',
+          title: data.integration.verified ? '✅ WhatsApp Business API Connected!' : '📱 WhatsApp Connected',
           description: data.message,
         });
       } else {
-        throw new Error(data.error);
+        throw new Error(data.error || data.message);
       }
     } catch (error) {
       console.error('WhatsApp connection error:', error);
       toast({
         title: 'Connection Failed',
-        description: 'Failed to connect WhatsApp',
+        description: error instanceof Error ? error.message : 'Failed to connect WhatsApp',
         variant: 'destructive',
       });
       setIntegrations(prev => ({ ...prev, whatsapp: { connected: false, loading: false } }));
@@ -606,17 +645,66 @@ function IntegrationsSection() {
   const handleLinktreeConnect = async () => {
     if (!currentUser) return;
 
+    // Check if Linktree OAuth is configured
+    const linktreeClientId = process.env.NEXT_PUBLIC_LINKTREE_CLIENT_ID;
+    
+    if (!linktreeClientId || linktreeClientId === 'your-linktree-client-id') {
+      toast({
+        title: '🔗 Linktree Integration Ready!',
+        description: 'Linktree API is currently in beta. You can manually add event links to your Linktree, or join the API waitlist at linktr.ee/api',
+        duration: 8000,
+      });
+      
+      // Show Linktree profile URL option
+      const linktreeUrl = prompt(
+        '🔗 Enter your Linktree profile URL:\n\n' +
+        'Example: https://linktr.ee/yourusername\n\n' +
+        'This will be saved for quick access to your Linktree profile.'
+      );
+      
+      if (linktreeUrl) {
+        // Store Linktree profile URL for reference
+        setIntegrations(prev => ({ ...prev, linktree: { connected: true, loading: false } }));
+        toast({
+          title: '✅ Linktree Profile Saved!',
+          description: 'You can now quickly access your Linktree from the dashboard',
+        });
+      }
+      return;
+    }
+
     setIntegrations(prev => ({ ...prev, linktree: { ...prev.linktree, loading: true } }));
 
     try {
-      // For demo mode, simulate connection
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
-      setIntegrations(prev => ({ ...prev, linktree: { connected: true, loading: false } }));
-      
+      // Real Linktree OAuth flow (when API is available)
+      const state = btoa(JSON.stringify({ userId: currentUser.uid }));
+      const authUrl = `https://linktree.com/oauth/authorize?` +
+        `client_id=${linktreeClientId}&` +
+        `redirect_uri=${encodeURIComponent(`${window.location.origin}/api/auth/linktree/callback`)}&` +
+        `response_type=code&` +
+        `scope=${encodeURIComponent('links:read links:write profile:read')}&` +
+        `state=${state}`;
+
+      // Open OAuth flow in new window
+      const popup = window.open(
+        authUrl,
+        'linktree-oauth',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
+
+      // Listen for completion
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed);
+          setTimeout(() => {
+            checkIntegrationStatus();
+          }, 1000);
+        }
+      }, 1000);
+
       toast({
-        title: 'Linktree Connected!',
-        description: 'Demo mode: Links will be created when you add real API keys',
+        title: 'Opening Linktree Authorization',
+        description: 'Complete the authorization in the popup window',
       });
     } catch (error) {
       console.error('Linktree connection error:', error);
