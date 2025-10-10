@@ -438,7 +438,35 @@ function IntegrationsSection() {
     if (currentUser) {
       checkIntegrationStatus();
     }
-  }, [currentUser]);
+
+    // Listen for OAuth popup messages
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data.type === 'oauth_success') {
+        if (event.data.integration === 'google-calendar') {
+          setIntegrations(prev => ({ ...prev, googleCalendar: { connected: true, loading: false } }));
+          toast({
+            title: '🎉 Google Calendar Connected!',
+            description: 'Your Google Calendar is now synced with Campus Event Hub',
+          });
+        }
+      } else if (event.data.type === 'oauth_error') {
+        setIntegrations(prev => ({
+          ...prev,
+          googleCalendar: { connected: false, loading: false }
+        }));
+        toast({
+          title: 'Connection Failed',
+          description: `Failed to connect Google Calendar: ${event.data.error}`,
+          variant: 'destructive',
+        });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [currentUser, toast]);
 
   const checkIntegrationStatus = async () => {
     if (!currentUser) return;
@@ -486,14 +514,38 @@ function IntegrationsSection() {
     setIntegrations(prev => ({ ...prev, googleCalendar: { ...prev.googleCalendar, loading: true } }));
 
     try {
-      // For demo mode, simulate connection
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setIntegrations(prev => ({ ...prev, googleCalendar: { connected: true, loading: false } }));
-      
+      // Generate real OAuth URL for Google Calendar
+      const state = btoa(JSON.stringify({ userId: currentUser.uid }));
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&` +
+        `redirect_uri=${encodeURIComponent(`${window.location.origin}/api/auth/google/callback`)}&` +
+        `response_type=code&` +
+        `scope=${encodeURIComponent('https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events')}&` +
+        `access_type=offline&` +
+        `prompt=consent&` +
+        `state=${state}`;
+
+      // Open OAuth flow in new window
+      const popup = window.open(
+        authUrl,
+        'google-oauth',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
+
+      // Listen for completion
+      const checkClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkClosed);
+          // Check if connection was successful
+          setTimeout(() => {
+            checkIntegrationStatus();
+          }, 1000);
+        }
+      }, 1000);
+
       toast({
-        title: 'Google Calendar Connected!',
-        description: 'Demo mode: Events will sync when you add real API keys',
+        title: 'Opening Google Calendar Authorization',
+        description: 'Complete the authorization in the popup window',
       });
     } catch (error) {
       console.error('Google Calendar connection error:', error);
