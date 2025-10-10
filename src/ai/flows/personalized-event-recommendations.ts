@@ -33,10 +33,14 @@ export type PersonalizedEventRecommendationsOutput =
 export async function getPersonalizedEventRecommendations(
   input: PersonalizedEventRecommendationsInput
 ): Promise<PersonalizedEventRecommendationsOutput> {
+  // Return empty recommendations if AI is not configured
+  if (!ai) {
+    return { recommendedEvents: [] };
+  }
   return personalizedEventRecommendationsFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const prompt = ai ? ai.definePrompt({
   name: 'personalizedEventRecommendationsPrompt',
   input: {schema: PersonalizedEventRecommendationsInputSchema},
   output: {schema: PersonalizedEventRecommendationsOutputSchema},
@@ -46,16 +50,16 @@ User RSVPed events: {{userRsvpEvents}}
 User favorited events: {{userFavoriteEvents}}
 
 Recommend events similar to these events the user has engaged with.`,
-});
+}) : null;
 
-const personalizedEventRecommendationsFlow = ai.defineFlow(
+const personalizedEventRecommendationsFlow = ai ? ai.defineFlow(
   {
     name: 'personalizedEventRecommendationsFlow',
     inputSchema: PersonalizedEventRecommendationsInputSchema,
     outputSchema: PersonalizedEventRecommendationsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt!(input);
     return output!;
   }
-);
+) : null;

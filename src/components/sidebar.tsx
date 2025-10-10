@@ -16,6 +16,7 @@ import {
   Settings,
   Star,
   LayoutDashboard,
+  Calendar,
 } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { Separator } from '@/components/ui/separator';
@@ -30,6 +31,7 @@ export default function AppSidebar() {
   const commonMenuItems = [
     { href: '/', icon: Home, label: 'Home', tooltip: 'Home' },
     { href: '/explore', icon: Compass, label: 'Explore', tooltip: 'Explore' },
+    { href: '/calendar', icon: Calendar, label: 'Calendar', tooltip: 'Calendar' },
   ];
 
   const studentMenuItems = [
@@ -43,7 +45,7 @@ export default function AppSidebar() {
     ...commonMenuItems
   ];
 
-  const menuItems = currentUser?.role === 'society' ? societyMenuItems : studentMenuItems;
+  const menuItems = (currentUser?.role === 'society_admin' || currentUser?.role === 'super_admin') ? societyMenuItems : studentMenuItems;
 
   const footerItems = [
     { href: '/profile', icon: User, label: 'Profile', tooltip: 'Profile' },

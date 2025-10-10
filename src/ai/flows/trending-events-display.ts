@@ -20,10 +20,14 @@ const TrendingEventsOutputSchema = z.array(
 export type TrendingEventsOutput = z.infer<typeof TrendingEventsOutputSchema>;
 
 export async function getTrendingEvents(): Promise<TrendingEventsOutput> {
+  // Return empty array if AI is not configured
+  if (!ai) {
+    return [];
+  }
   return trendingEventsFlow();
 }
 
-const trendingEventsPrompt = ai.definePrompt({
+const trendingEventsPrompt = ai ? ai.definePrompt({
   name: 'trendingEventsPrompt',
   output: {schema: TrendingEventsOutputSchema},
   prompt: `You are an AI assistant that recommends a list of trending events.
@@ -33,13 +37,13 @@ const trendingEventsPrompt = ai.definePrompt({
   Do not include any other information other than the eventId, eventName, and rsvpCount.
   Limit the number of trending events to 5.
   `,
-});
+}) : null;
 
-const trendingEventsFlow = ai.defineFlow({
+const trendingEventsFlow = ai ? ai.defineFlow({
   name: 'trendingEventsFlow',
   outputSchema: TrendingEventsOutputSchema,
 },
 async () => {
-  const {output} = await trendingEventsPrompt();
+  const {output} = await trendingEventsPrompt!();
   return output!;
-});
+}) : null;

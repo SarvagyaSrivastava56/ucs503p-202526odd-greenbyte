@@ -1,19 +1,49 @@
-import { getPersonalizedEventRecommendations } from "@/ai/flows/personalized-event-recommendations";
+'use client';
+
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { mockEvents } from "@/lib/mock-data";
 import { EventCard } from "./event-card";
+import { getUpcomingEvents } from "@/lib/firebase-queries";
+import { useEffect, useState } from "react";
+import type { Event } from "@/lib/types";
+import { EventCardSkeleton } from "./event-card-skeleton";
 
-export default async function RecommendedEvents() {
-  const recommendationsData = await getPersonalizedEventRecommendations({
-    userRsvpEvents: ['event-1'],
-    userFavoriteEvents: ['event-2'],
-  });
-
-  let recommendedEvents = mockEvents.filter(e => recommendationsData.recommendedEvents.includes(e.id));
+export default function RecommendedEvents() {
+  const [recommendedEvents, setRecommendedEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  if (!recommendedEvents.length) {
-    // Fallback if AI fails or returns no results
-    recommendedEvents = mockEvents.slice(4, 8);
+  useEffect(() => {
+    const fetchRecommended = async () => {
+      try {
+        const events = await getUpcomingEvents(6);
+        setRecommendedEvents(events);
+      } catch (error) {
+        console.error('Error fetching recommended events:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRecommended();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mb-12">
+        <h2 className="font-headline text-2xl font-semibold mb-4">Recommended For You</h2>
+        <Carousel opts={{ align: "start" }}>
+          <CarouselContent className="-ml-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <CarouselItem key={i} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                <EventCardSkeleton />
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+        </Carousel>
+      </div>
+    );
+  }
+
+  if (recommendedEvents.length === 0) {
+    return null;
   }
 
   return (

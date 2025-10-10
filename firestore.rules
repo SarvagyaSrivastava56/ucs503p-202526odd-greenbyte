@@ -1,151 +1,225 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Manages user profile data, ensuring only the user can access their own profile.
-     * @path /users/{userId}
-     * @allow (create) User with UID 'user_abc' creates their profile at /users/user_abc.
-     * @deny (create) User with UID 'user_abc' tries to create a profile at /users/user_xyz.
-     * @allow (get, update, delete) User with UID 'user_abc' reads/updates/deletes their profile at /users/user_abc.
-     * @deny (get, update, delete) User with UID 'user_abc' tries to read/update/delete a profile at /users/user_xyz.
-     * @principle Enforces document ownership for all operations.
-     */
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    
+    function hasRole(role) {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isSocietyAdmin() {
+      // Check if user email contains 'society' as a fallback
+      return isSignedIn() && (
+        hasRole('society_admin') || 
+        hasRole('super_admin') ||
+        (request.auth.token.email.matches('.*society.*') || request.auth.token.email.matches('.*@.*\\.society'))
+      );
+    }
+    
+    function isSuperAdmin() {
+      return hasRole('super_admin');
+    }
+    
+    function isSocietyAdminOf(societyId) {
+      return isSignedIn() && (
+        hasRole('super_admin') ||
+        (hasRole('society_admin') && 
+         exists(/databases/$(database)/documents/societies/$(societyId)) &&
+         get(/databases/$(database)/documents/societies/$(societyId)).data.admins.hasAny([request.auth.uid])) ||
+        // Allow society admins based on email pattern
+        (request.auth.token.email.matches('.*society.*') || request.auth.token.email.matches('.*@.*\\.society'))
+      );
+    }
+    
+    function isEventCreator(eventId) {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/events/$(eventId)) &&
+             get(/databases/$(database)/documents/events/$(eventId)).data.createdBy == request.auth.uid;
+    }
+    
+    function validateTimestamp(field) {
+      return request.resource.data[field] is timestamp;
+    }
+    
+    function validateString(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= minLen &&
+             request.resource.data[field].size() <= maxLen;
+    }
+    
+    // Users collection: /users/{userId}
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId) &&
+                       validateString('displayName', 1, 100) &&
+                       validateString('email', 3, 255) &&
+                       request.resource.data.role in ['student', 'society_admin', 'super_admin'] &&
+                       request.resource.data.keys().hasAll(['displayName', 'email', 'role']) &&
+                       (!request.resource.data.keys().hasAny(['createdAt']) || validateTimestamp('createdAt'));
+      allow update: if isOwner(userId) &&
+                       // Users can't change their own role
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) &&
+                       // Validate updated fields
+                       (!request.resource.data.keys().hasAny(['displayName']) || validateString('displayName', 1, 100)) &&
+                       (!request.resource.data.keys().hasAny(['updatedAt']) || validateTimestamp('updatedAt'));
+      allow delete: if isOwner(userId) || isSuperAdmin();
+      
+      // User's RSVPs: /users/{userId}/rsvps/{rsvpId}
+      match /rsvps/{rsvpId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+                                 validateString('eventId', 1, 200) &&
+                                 request.resource.data.status in ['rsvped', 'waitlisted', 'cancelled'];
+        allow delete: if isOwner(userId);
       }
-
-      function isOwner(userId) {
-        return request.auth.uid == userId;
+      
+      // User's favorite events: /users/{userId}/favorites/{eventId}
+      match /favorites/{eventId} {
+        allow read, write: if isOwner(userId);
       }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false; // Disallow listing of user profiles for privacy.
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if isSignedIn() && isOwner(userId);
     }
-
-    /**
-     * @description Manages society profile data, ensuring only the society admin can access and modify the profile.
-     * @path /societyProfiles/{societyId}
-     * @allow (create) User with UID 'admin_abc' creates a society profile where request.resource.data.adminUserId == 'admin_abc'.
-     * @deny (create) User with UID 'user_xyz' tries to create a society profile where request.resource.data.adminUserId == 'admin_abc'.
-     * @allow (get, update, delete) User with UID 'admin_abc' reads/updates/deletes the society profile where resource.data.adminUserId == 'admin_abc'.
-     * @deny (get, update, delete) User with UID 'user_xyz' tries to read/update/delete the society profile where resource.data.adminUserId == 'admin_abc'.
-     * @principle Enforces admin-only access based on the 'adminUserId' field.
-     */
-    match /societyProfiles/{societyId} {
-      function isSignedIn() {
-        return request.auth != null;
+    
+    // Societies collection: /societies/{societyId}
+    match /societies/{societyId} {
+      allow read: if isSignedIn();
+      allow create: if isSocietyAdmin() &&
+                       validateString('name', 2, 100) &&
+                       validateString('description', 0, 500) &&
+                       request.resource.data.admins is list &&
+                       request.resource.data.admins.hasAny([request.auth.uid]);
+      allow update: if isSocietyAdminOf(societyId) &&
+                       validateString('name', 2, 100) &&
+                       validateString('description', 0, 500) &&
+                       // Ensure at least one admin remains
+                       request.resource.data.admins.size() > 0;
+      allow delete: if isSuperAdmin();
+      
+      // Team members: /societies/{societyId}/team/{memberId}
+      match /team/{memberId} {
+        allow read: if isSignedIn();
+        allow create: if isSocietyAdminOf(societyId) &&
+                         validateString('email', 3, 255) &&
+                         request.resource.data.role in ['owner', 'admin', 'editor', 'check-in-only'] &&
+                         request.resource.data.status in ['pending', 'active'];
+        allow update: if isSocietyAdminOf(societyId) &&
+                         request.resource.data.role in ['owner', 'admin', 'editor', 'check-in-only'];
+        allow delete: if isSocietyAdminOf(societyId);
       }
-
-      function isAdmin(adminUserId) {
-        return request.auth.uid == adminUserId;
+      
+      // Audit log: /societies/{societyId}/auditLog/{logId}
+      match /auditLog/{logId} {
+        allow read: if isSocietyAdminOf(societyId);
+        allow create: if isSocietyAdminOf(societyId);
+        allow update, delete: if false; // Audit logs are immutable
       }
-
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
-      allow update: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
-      allow delete: if isSignedIn() && request.resource.data.adminUserId == request.auth.uid;
     }
-
-    /**
-     * @description Manages events hosted by societies, ensuring only the society admin can create, update, and delete events.
-     * @path /societyProfiles/{societyId}/events/{eventId}
-     * @allow (create) User with UID 'admin_abc' creates an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
-     * @deny (create) User with UID 'user_xyz' tries to create an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
-     * @allow (get, update, delete) User with UID 'admin_abc' reads/updates/deletes an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
-     * @deny (get, update, delete) User with UID 'user_xyz' tries to read/update/delete an event under society 'society_xyz' where societyProfiles/society_xyz.adminUserId == 'admin_abc'.
-     * @principle Enforces admin-only access based on the 'hostId' field in the event and the 'adminUserId' in the society profile.
-     */
-    match /societyProfiles/{societyId}/events/{eventId} {
-      function isSignedIn() {
-        return request.auth != null;
+    
+    // Events collection: /events/{eventId}
+    match /events/{eventId} {
+      // Allow anyone to read published events
+      allow read: if true;
+      allow create: if isSocietyAdmin() &&
+                       validateString('title', 3, 200) &&
+                       validateString('description', 10, 5000) &&
+                       validateString('societyId', 1, 200) &&
+                       validateString('venue', 1, 200) &&
+                       validateString('category', 1, 50) &&
+                       request.resource.data.capacity is int &&
+                       request.resource.data.capacity >= 0 &&
+                       request.resource.data.status in ['draft', 'published', 'archived'] &&
+                       request.resource.data.isOnline is bool &&
+                       request.resource.data.isPaid is bool &&
+                       request.resource.data.createdBy == request.auth.uid &&
+                       // Validate society admin relationship
+                       isSocietyAdminOf(request.resource.data.societyId);
+                       
+      allow update: if (isEventCreator(eventId) || isSocietyAdminOf(resource.data.societyId)) &&
+                       // Can't change creator or society after creation
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdBy', 'societyId'])) &&
+                       // Validate fields if changed
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['title']) || validateString('title', 3, 200)) &&
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['description']) || validateString('description', 10, 5000)) &&
+                       (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']) || request.resource.data.status in ['draft', 'published', 'archived']);
+                       
+      allow delete: if isEventCreator(eventId) || isSocietyAdminOf(resource.data.societyId) || isSuperAdmin();
+      
+      // Event RSVPs: /events/{eventId}/rsvps/{userId}
+      match /rsvps/{userId} {
+        allow read: if isSignedIn();
+        allow create: if isOwner(userId) &&
+                         request.resource.data.status in ['rsvped', 'waitlisted', 'cancelled'] &&
+                         validateTimestamp('createdAt');
+        allow update: if isOwner(userId) &&
+                         request.resource.data.status in ['rsvped', 'waitlisted', 'cancelled'] &&
+                         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt']));
+        allow delete: if isOwner(userId);
       }
-
-      function isSocietyAdmin(societyId) {
-          return get(/databases/$(database)/documents/societyProfiles/$(societyId)).data.adminUserId == request.auth.uid;
+      
+      // Event Chat: /events/{eventId}/chat/{messageId}
+      match /chat/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() &&
+                         request.resource.data.uid == request.auth.uid &&
+                         validateTimestamp('createdAt') &&
+                         // Must have either text or imageUrl
+                         (request.resource.data.keys().hasAny(['text']) || request.resource.data.keys().hasAny(['imageUrl'])) &&
+                         (!request.resource.data.keys().hasAny(['text']) || validateString('text', 1, 2000));
+        // Chat messages cannot be updated or deleted (immutable)
+        allow update: if false;
+        allow delete: if isEventCreator(eventId) || isSuperAdmin();
       }
-
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn() && isSocietyAdmin(societyId);
-      allow update: if isSignedIn() && isSocietyAdmin(societyId);
-      allow delete: if isSignedIn() && isSocietyAdmin(societyId);
     }
-
-    /**
-     * @description Manages user RSVPs to events, ensuring only the user can access and modify their own RSVPs.
-     * @path /users/{userId}/rsvps/{rsvpId}
-     * @allow (create) User with UID 'user_abc' creates an RSVP at /users/user_abc/rsvps/rsvp_123.
-     * @deny (create) User with UID 'user_abc' tries to create an RSVP at /users/user_xyz/rsvps/rsvp_123.
-     * @allow (get, update, delete) User with UID 'user_abc' reads/updates/deletes their RSVP at /users/user_abc/rsvps/rsvp_123.
-     * @deny (get, update, delete) User with UID 'user_abc' tries to read/update/delete an RSVP at /users/user_xyz/rsvps/rsvp_123.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId}/rsvps/{rsvpId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if isSignedIn() && isOwner(userId);
+    
+    // Announcements collection: /announcements/{announcementId}
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow create: if isSocietyAdmin() &&
+                       validateString('title', 3, 200) &&
+                       validateString('body', 10, 500) &&
+                       request.resource.data.targets is list;
+      allow update: if isSocietyAdmin();
+      allow delete: if isSocietyAdmin() || isSuperAdmin();
     }
-
-    /**
-     * @description Manages chat messages for events, ensuring only authenticated users can post messages.
-     * @path /societyProfiles/{societyId}/events/{eventId}/chatMessages/{chatMessageId}
-     * @allow (create) User with UID 'user_abc' creates a chat message in event 'event_xyz'.
-     * @deny (create) Anonymous user tries to create a chat message.
-     * @allow (get, list) Any authenticated user can read chat messages.
-     * @deny (update, delete) No one can update or delete chat messages.
-     * @principle Enforces authentication for message creation and allows public read access.
-     */
-    match /societyProfiles/{societyId}/events/{eventId}/chatMessages/{chatMessageId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get: if isSignedIn();
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+    
+    // Ticket Tiers collection: /ticketTiers/{tierId}
+    match /ticketTiers/{tierId} {
+      allow read: if isSignedIn();
+      allow create: if isSocietyAdmin() &&
+                       validateString('eventId', 1, 200) &&
+                       validateString('name', 1, 100) &&
+                       request.resource.data.price is number &&
+                       request.resource.data.capacity is int &&
+                       request.resource.data.capacity >= 0;
+      allow update: if isSocietyAdmin();
+      allow delete: if isSocietyAdmin() || isSuperAdmin();
     }
-
-    /**
-     * @description Manages user's favorite events, ensuring only the user can access and modify their own favorites.
-     * @path /users/{userId}/favoriteEvents/{favoriteEventId}
-     * @allow (create) User with UID 'user_abc' creates a favorite event entry at /users/user_abc/favoriteEvents/fav_123.
-     * @deny (create) User with UID 'user_abc' tries to create a favorite event entry at /users/user_xyz/favoriteEvents/fav_123.
-     * @allow (get, update, delete) User with UID 'user_abc' reads/updates/deletes their favorite event entry at /users/user_abc/favoriteEvents/fav_123.
-     * @deny (get, update, delete) User with UID 'user_abc' tries to read/update/delete a favorite event entry at /users/user_xyz/favoriteEvents/fav_123.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId}/favoriteEvents/{favoriteEventId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if isSignedIn() && isOwner(userId);
+    
+    // Promo Codes collection: /promoCodes/{codeId}
+    match /promoCodes/{codeId} {
+      allow read: if isSignedIn();
+      allow create: if isSocietyAdmin() &&
+                       validateString('code', 2, 50) &&
+                       validateString('societyId', 1, 200) &&
+                       request.resource.data.discount is number &&
+                       request.resource.data.type in ['percentage', 'fixed'] &&
+                       request.resource.data.maxUses is int;
+      allow update: if isSocietyAdmin();
+      allow delete: if isSocietyAdmin() || isSuperAdmin();
+    }
+    
+    // Deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

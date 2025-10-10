@@ -1,20 +1,49 @@
 'use client';
 import MainLayout from '@/components/main-layout';
 import { EventCard } from '@/components/event-card';
-import { useAppContext } from '@/context/app-context';
-import { mockEvents } from '@/lib/mock-data';
+import { useEffect, useState } from 'react';
+import { getUserEvents } from '@/lib/firebase-queries';
+import type { Event } from '@/lib/types';
 import { Info } from 'lucide-react';
+import { useFirebase } from '@/firebase';
+import { EventCardSkeleton } from '@/components/event-card-skeleton';
 
 export default function MyEventsPage() {
-  const { rsvpEvents } = useAppContext();
-  const events = mockEvents.filter(event => rsvpEvents.includes(event.id));
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useFirebase();
+
+  useEffect(() => {
+    const fetchMyEvents = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const userEvents = await getUserEvents(user.uid);
+        setEvents(userEvents);
+      } catch (error) {
+        console.error('Error fetching user events:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMyEvents();
+  }, [user]);
 
   return (
     <MainLayout>
       <div className="p-8">
         <h1 className="font-headline text-3xl font-bold">My Events</h1>
         <p className="mt-2 text-muted-foreground">Events you have RSVPed to.</p>
-        {events.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : events.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mt-8">
             {events.map((event) => (
               <EventCard key={event.id} event={event} />

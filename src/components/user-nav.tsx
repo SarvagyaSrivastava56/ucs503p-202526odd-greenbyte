@@ -10,34 +10,41 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAppContext } from '@/context/app-context';
+import { useFirebase } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export function UserNav() {
-  const { currentUser, logout } = useAppContext();
+  const { user } = useFirebase();
   const router = useRouter();
 
-  if (!currentUser) {
+  if (!user) {
     return null;
   }
 
-  const userInitials = currentUser.name
+  const userName = user.displayName || user.email?.split('@')[0] || 'User';
+  const userInitials = userName
     .split(' ')
     .map((n) => n[0])
-    .join('');
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut(auth);
     router.push('/login');
   };
+
+  const isSocietyAdmin = user.email?.includes('society');
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={currentUser.avatarUrl} alt={`@${currentUser.name}`} />
+            <AvatarImage src={user.photoURL || ''} alt={`@${userName}`} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -45,9 +52,9 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{currentUser.name}</p>
+            <p className="text-sm font-medium leading-none">{userName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {currentUser.email}
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -58,10 +65,15 @@ export function UserNav() {
               Profile
             </DropdownMenuItem>
           </Link>
-          {currentUser.role !== 'society' && (
-            <Link href="/my-events">
+          <Link href="/my-events">
+            <DropdownMenuItem>
+              My Events
+            </DropdownMenuItem>
+          </Link>
+          {isSocietyAdmin && (
+            <Link href="/society-dashboard">
               <DropdownMenuItem>
-                My Events
+                Society Dashboard
               </DropdownMenuItem>
             </Link>
           )}

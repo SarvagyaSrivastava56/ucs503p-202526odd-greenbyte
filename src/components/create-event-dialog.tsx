@@ -66,7 +66,7 @@ const eventFormSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters.'),
   description: z.string().min(10, 'Description must be at least 10 characters.'),
   bannerUrl: z.string().url('Please enter a valid image URL.').or(z.literal('')),
-  category: z.enum(categories),
+  category: z.enum(['Music', 'Tech', 'Art', 'Sports', 'Workshop', 'Social', 'Conference', 'Party', 'Networking'] as const),
   startAt: z.date({ required_error: "A start date and time is required." }),
   endAt: z.date({ required_error: "An end date and time is required." }),
   venue: z.string().min(3, 'Venue is required.'),
@@ -91,18 +91,35 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
   const { toast } = useToast();
   const { currentUser } = useAppContext();
 
-  const defaultValues: Partial<EventFormValues> = eventToEdit ? {
-    ...eventToEdit,
-    startAt: new Date(eventToEdit.startAt),
-    endAt: new Date(eventToEdit.endAt),
-  } : {
-    title: '',
-    description: '',
-    bannerUrl: '',
-    isOnline: false,
-    isPaid: false,
-    status: 'published',
-  };
+  const defaultValues: Partial<EventFormValues> = React.useMemo(() => {
+    if (eventToEdit) {
+      return {
+        ...eventToEdit,
+        startAt: new Date(eventToEdit.startAt),
+        endAt: new Date(eventToEdit.endAt),
+      };
+    }
+    
+    // Create static dates for new events to prevent re-creation on every render
+    const now = new Date();
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    
+    return {
+      title: '',
+      description: '',
+      bannerUrl: '',
+      category: 'Social' as const,
+      startAt: now,
+      endAt: twoHoursLater,
+      venue: '',
+      isOnline: false,
+      link: '',
+      capacity: 0,
+      isPaid: false,
+      price: 0,
+      status: 'published' as const,
+    };
+  }, [eventToEdit]);
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -123,16 +140,34 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
     } else {
       form.reset(defaultValues);
     }
-  }, [eventToEdit, form]);
+  }, [eventToEdit, defaultValues]);
 
   const onSubmit = async (data: EventFormValues) => {
-    if (!currentUser || !currentUser.societyIds || currentUser.societyIds.length === 0) {
+    if (!currentUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to create events.' });
+      return;
+    }
+    
+    // For society admins, we'll use a default society ID if none is set
+    let societyId = currentUser.societyIds?.[0];
+    if (!societyId && currentUser.role === 'society_admin') {
+      // Use a default society ID for society admins
+      societyId = 'society-1'; // This should match your seed data
+    }
+    
+    if (!societyId) {
       toast({ variant: 'destructive', title: 'Error', description: 'You are not associated with any society.' });
       return;
     }
     
     try {
-      await saveEvent({ ...data, societyId: currentUser.societyIds[0] }, eventToEdit?.id);
+      const eventData = {
+        ...data,
+        startAt: data.startAt.toISOString(),
+        endAt: data.endAt.toISOString(),
+        societyId: societyId
+      };
+      await saveEvent(eventData, eventToEdit?.id);
       toast({
         title: `Event ${eventToEdit ? 'updated' : 'created'} successfully!`,
         description: `${data.title} has been saved.`,

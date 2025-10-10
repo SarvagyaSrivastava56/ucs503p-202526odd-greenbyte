@@ -1,6 +1,5 @@
 'use client';
 
-import { mockEvents } from '@/lib/mock-data';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import {
@@ -19,10 +18,15 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Confetti from 'react-dom-confetti';
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useAppContext } from '@/context/app-context';
+import { useFirebase } from '@/firebase';
 import { cn } from '@/lib/utils';
 import type { Event } from '@/lib/types';
+import { getEvent } from '@/lib/firebase-queries';
+import { doc, setDoc, deleteDoc, collection, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/firebase';
+import { createRsvp } from '@/lib/rsvp';
 
 type ChatMessage = {
   user: {
@@ -44,45 +48,141 @@ const initialMessages: ChatMessage[] = [
 ];
 
 export default function EventDetailContent({ id }: { id: string }) {
-  const {
-    isRsvpd: isEventRsvpd,
-    addRsvp,
-    isFavorite,
-    toggleFavorite,
-    currentUser,
-  } = useAppContext();
+  const { currentUser } = useAppContext();
+  const { user } = useFirebase();
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [hasRsvpd, setHasRsvpd] = useState(false);
+  const [isEventFavorite, setIsEventFavorite] = useState(false);
+  const [isRsvping, setIsRsvping] = useState(false);
 
   const { toast } = useToast();
 
-  const event : Event | undefined = mockEvents.find((e) => e.id === id);
+  // Fetch event data
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const eventData = await getEvent(id);
+        if (!eventData) {
+          notFound();
+        }
+        setEvent(eventData);
+      } catch (error) {
+        console.error('Error fetching event:', error);
+        notFound();
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvent();
+  }, [id]);
 
-  if (!event) {
-    notFound();
-  }
-
-  const hasRsvpd = isEventRsvpd(event.id);
-  const isEventFavorite = isFavorite(event.id);
-
-  const handleRsvp = () => {
-    if (hasRsvpd) return;
-    addRsvp(event.id);
-    setShowConfetti(true);
-    toast({
-      title: '🎉 RSVP Successful!',
-      description: `You're going to ${event.title}.`,
+  // Check RSVP status
+  useEffect(() => {
+    if (!user || !id) return;
+    
+    const rsvpRef = doc(firestore, 'users', user.uid, 'rsvps', id);
+    const unsubscribe = onSnapshot(rsvpRef, (doc) => {
+      setHasRsvpd(doc.exists() && doc.data()?.status === 'rsvped');
     });
-    setTimeout(() => setShowConfetti(false), 3000); // Reset confetti
+
+    return () => unsubscribe();
+  }, [user, id]);
+
+  // Check favorite status
+  useEffect(() => {
+    if (!user || !id) return;
+    
+    const favoriteRef = doc(firestore, 'users', user.uid, 'favorites', id);
+    const unsubscribe = onSnapshot(favoriteRef, (doc) => {
+      setIsEventFavorite(doc.exists());
+    });
+
+    return () => unsubscribe();
+  }, [user, id]);
+
+  // Listen to chat messages
+  useEffect(() => {
+    if (!id) return;
+
+    const messagesRef = collection(firestore, 'events', id, 'chat');
+    const unsubscribe = onSnapshot(messagesRef, (snapshot) => {
+      const chatMessages = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          user: { name: data.userName, avatar: data.userAvatar },
+          message: data.message,
+        };
+      });
+      setMessages(chatMessages);
+    });
+
+    return () => unsubscribe();
+  }, [id]);
+
+  const handleRsvp = async () => {
+    if (!user || !event || hasRsvpd || isRsvping) return;
+    
+    setIsRsvping(true);
+    try {
+      const result = await createRsvp(user.uid, event.id);
+      setShowConfetti(true);
+      
+      if (result.status === 'waitlisted') {
+        toast({
+          title: '📋 Added to Waitlist',
+          description: `Event is at capacity. You've been added to the waitlist for ${event.title}.`,
+        });
+      } else {
+        toast({
+          title: '🎉 RSVP Successful!',
+          description: `You're going to ${event.title}.`,
+        });
+      }
+      setTimeout(() => setShowConfetti(false), 3000);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'RSVP Failed',
+        description: error.message || 'Failed to RSVP. Please try again.',
+      });
+    } finally {
+      setIsRsvping(false);
+    }
   };
 
-  const handleFavoriteClick = () => {
-    toggleFavorite(event.id);
-    toast({
-      title: isEventFavorite ? 'Removed from Favorites' : 'Added to Favorites',
-      description: `${event.title} has been ${isEventFavorite ? 'removed from' : 'added to'} your favorites.`,
-    });
+  const handleFavoriteClick = async () => {
+    if (!user || !event) return;
+
+    try {
+      const favoriteRef = doc(firestore, 'users', user.uid, 'favorites', event.id);
+      
+      if (isEventFavorite) {
+        await deleteDoc(favoriteRef);
+        toast({
+          title: 'Removed from Favorites',
+          description: `${event.title} has been removed from your favorites.`,
+        });
+      } else {
+        await setDoc(favoriteRef, {
+          eventId: event.id,
+          createdAt: serverTimestamp(),
+        });
+        toast({
+          title: 'Added to Favorites',
+          description: `${event.title} has been added to your favorites.`,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update favorites. Please try again.',
+      });
+    }
   };
 
   const handleAddToCalendar = () => {
@@ -92,18 +192,44 @@ export default function EventDetailContent({ id }: { id: string }) {
     });
   };
 
-  const handleSendMessage = (e: FormEvent) => {
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === '' || !currentUser) return;
+    if (newMessage.trim() === '' || !user || !event) return;
 
-    const userMessage: ChatMessage = {
-      user: { name: currentUser.name, avatar: currentUser.avatarUrl },
-      message: newMessage,
-    };
-
-    setMessages([...messages, userMessage]);
-    setNewMessage('');
+    try {
+      const messagesRef = collection(firestore, 'events', event.id, 'chat');
+      await addDoc(messagesRef, {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        userAvatar: user.photoURL || '',
+        message: newMessage,
+        createdAt: serverTimestamp(),
+      });
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to send message. Please try again.',
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="animate-pulse space-y-8">
+          <div className="h-96 bg-muted rounded-2xl" />
+          <div className="h-64 bg-muted rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    notFound();
+  }
 
 
   const confettiConfig = {
@@ -119,10 +245,10 @@ export default function EventDetailContent({ id }: { id: string }) {
     colors: ['#a864fd', '#29cdff', '#78ff44', '#ff718d', '#fdff6a'],
   };
   
-  const userInitials = currentUser?.name
-    .split(' ')
+  const userInitials = user?.displayName
+    ?.split(' ')
     .map((n) => n[0])
-    .join('');
+    .join('') || 'U';
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -171,10 +297,10 @@ export default function EventDetailContent({ id }: { id: string }) {
               </div>
             ))}
 
-            {currentUser && (
+            {user && (
               <form onSubmit={handleSendMessage} className="flex gap-3 items-center mt-4">
                 <Avatar>
-                    <AvatarImage src={currentUser.avatarUrl} />
+                    <AvatarImage src={user.photoURL || ''} />
                     <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
                 <div className="relative w-full">
@@ -198,8 +324,8 @@ export default function EventDetailContent({ id }: { id: string }) {
             <div className="flex justify-center">
                 <Confetti active={showConfetti} config={confettiConfig} />
             </div>
-            <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvp} disabled={hasRsvpd}>
-                {hasRsvpd ? "You're going!" : "RSVP Now"}
+            <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvp} disabled={hasRsvpd || isRsvping || !user}>
+                {isRsvping ? "Processing..." : hasRsvpd ? "You're going!" : user ? "RSVP Now" : "Login to RSVP"}
             </Button>
             <div className="flex justify-around text-center">
               <Button variant="ghost" className="flex flex-col h-auto gap-1" onClick={handleFavoriteClick}>

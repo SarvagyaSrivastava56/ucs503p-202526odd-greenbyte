@@ -27,10 +27,19 @@ export default function ProfilePage() {
     );
   }
 
-  const userInitials = currentUser.name
+  // Get user name with fallbacks
+  const userName = currentUser.name || currentUser.email?.split('@')[0] || 'User';
+  
+  const userInitials = userName
     .split(' ')
     .map((n) => n[0])
-    .join('');
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
+
+  // Ensure arrays are defined with fallbacks
+  const safeRsvpEvents = rsvpEvents || [];
+  const safeFavoriteEvents = favoriteEvents || [];
 
   const handleLogout = () => {
     logout();
@@ -53,10 +62,10 @@ export default function ProfilePage() {
         <Card className="max-w-2xl mx-auto bg-background/60 dark:bg-card/60 backdrop-blur-xl border-border/20 shadow-lg">
           <CardHeader className="text-center">
             <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary">
-              <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />
+              <AvatarImage src={currentUser.avatarUrl} alt={userName} />
               <AvatarFallback className="text-3xl">{userInitials}</AvatarFallback>
             </Avatar>
-            <CardTitle className="font-headline text-2xl">{currentUser.name}</CardTitle>
+            <CardTitle className="font-headline text-2xl">{userName}</CardTitle>
             <p className="text-muted-foreground">{currentUser.email}</p>
           </CardHeader>
           <CardContent>
@@ -64,17 +73,17 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div className="p-4 rounded-lg bg-background/80">
                 <CalendarCheck className="h-8 w-8 mx-auto text-primary mb-2" />
-                <p className="text-2xl font-bold">{rsvpEvents.length}</p>
+                <p className="text-2xl font-bold">{safeRsvpEvents.length}</p>
                 <p className="text-sm text-muted-foreground">Events RSVP'd</p>
               </div>
               <div className="p-4 rounded-lg bg-background/80">
                 <Star className="h-8 w-8 mx-auto text-primary mb-2" />
-                <p className="text-2xl font-bold">{favoriteEvents.length}</p>
+                <p className="text-2xl font-bold">{safeFavoriteEvents.length}</p>
                 <p className="text-sm text-muted-foreground">Favorited Events</p>
               </div>
               <div className="p-4 rounded-lg bg-background/80">
                 <User className="h-8 w-8 mx-auto text-primary mb-2" />
-                <p className="text-2xl font-bold capitalize">{currentUser.role}</p>
+                <p className="text-2xl font-bold capitalize">{currentUser.role || 'student'}</p>
                 <p className="text-sm text-muted-foreground">Role</p>
               </div>
             </div>

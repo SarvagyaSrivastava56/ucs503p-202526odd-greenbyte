@@ -1,122 +1,174 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { User } from '@/lib/types';
-import { mockUsers } from '@/lib/mock-data';
-import { useRouter } from 'next/navigation';
+import { useFirebase } from '@/firebase';
+import { requestNotificationPermission } from '@/lib/push-notifications';
+import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/firebase';
+import { User } from '@/lib/types';
 
 type AppContextType = {
-  currentUser: User | null;
-  login: (email: string, password: string) => User;
-  logout: () => void;
-  signup: (userData: Omit<User, 'id' | 'avatarUrl'>) => User;
-  rsvpEvents: string[];
-  favoriteEvents: string[];
-  addRsvp: (eventId: string) => void;
-  isRsvpd: (eventId: string) => boolean;
-  toggleFavorite: (eventId: string) => void;
-  isFavorite: (eventId: string) => boolean;
+  currentUser: (User & { uid: string }) | null; // Extended user with role from Firestore
   notificationsEnabled: boolean;
   toggleNotifications: () => void;
+  isFavorite: (eventId: string) => boolean;
+  toggleFavorite: (eventId: string) => Promise<void>;
+  favorites: Set<string>;
+  rsvpEvents: any[];
+  favoriteEvents: any[];
+  logout: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [rsvpEvents, setRsvpEvents] = useState<string[]>([]);
-  const [favoriteEvents, setFavoriteEvents] = useState<string[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const router = useRouter();
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [currentUser, setCurrentUser] = useState<(User & { uid: string }) | null>(null);
+  const [rsvpEvents, setRsvpEvents] = useState<any[]>([]);
+  const [favoriteEvents, setFavoriteEvents] = useState<any[]>([]);
+  const { user, auth } = useFirebase();
 
   useEffect(() => {
-    const loggedInUser = sessionStorage.getItem('currentUser');
-    if (loggedInUser) {
-      setCurrentUser(JSON.parse(loggedInUser));
-    }
     const notificationsPref = localStorage.getItem('notificationsEnabled');
     if (notificationsPref) {
-        setNotificationsEnabled(JSON.parse(notificationsPref));
+      setNotificationsEnabled(JSON.parse(notificationsPref));
     }
   }, []);
 
-  const login = (email: string, password: string): User => {
-    const user = mockUsers.find(
-      (u) => u.email === email && u.password === password
-    );
-    if (user) {
-      const userToStore = { ...user };
-      delete userToStore.password;
-      setCurrentUser(userToStore);
-      sessionStorage.setItem('currentUser', JSON.stringify(userToStore));
-      return userToStore;
-    } else {
-      throw new Error('Invalid email or password');
+  // Fetch user data from Firestore when Firebase user changes
+  useEffect(() => {
+    if (!user) {
+      setCurrentUser(null);
+      setRsvpEvents([]);
+      setFavoriteEvents([]);
+      return;
     }
-  };
 
-  const logout = () => {
-    setCurrentUser(null);
-    sessionStorage.removeItem('currentUser');
-    router.push('/login');
-  };
+    const userRef = doc(firestore, 'users', user.uid);
+    const unsubscribe = onSnapshot(userRef, (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        setCurrentUser({
+          ...userData,
+          uid: user.uid,
+        } as User & { uid: string });
+      } else {
+        // If user document doesn't exist, create it with default values
+        // Determine role based on email
+        let role: 'student' | 'society_admin' | 'super_admin' = 'student';
+        if (user.email === 'society@example.com') {
+          role = 'society_admin';
+        } else if (user.email?.endsWith('@admin.campus.edu')) {
+          role = 'super_admin';
+        } else if (user.email?.endsWith('@society.campus.edu')) {
+          role = 'society_admin';
+        }
 
-  const signup = (userData: Omit<User, 'id'| 'avatarUrl'>): User => {
-    const existingUser = mockUsers.find((u) => u.email === userData.email);
-    if (existingUser) {
-      throw new Error('User with this email already exists');
+        setDoc(userRef, {
+          name: user.displayName || user.email?.split('@')[0] || 'User',
+          email: user.email,
+          avatarUrl: user.photoURL,
+          role: role,
+          interests: [],
+          societyIds: role === 'society_admin' ? ['society-1'] : [],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+        setCurrentUser({
+          uid: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          avatarUrl: user.photoURL,
+          role: role,
+          interests: [],
+          societyIds: role === 'society_admin' ? ['society-1'] : [],
+        } as User & { uid: string });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Listen to favorites in real-time
+  useEffect(() => {
+    if (!currentUser) {
+      setFavorites(new Set());
+      return;
     }
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      ...userData,
-      avatarUrl: `https://picsum.photos/seed/user${Date.now()}/100/100`,
-    };
-    mockUsers.push(newUser);
-    return newUser;
-  };
 
-  const addRsvp = (eventId: string) => {
-    setRsvpEvents((prev) => (prev.includes(eventId) ? prev : [...prev, eventId]));
-  };
+    const favoritesRef = doc(firestore, 'users', currentUser.uid);
+    const unsubscribe = onSnapshot(favoritesRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        const favoritesList = data?.favorites || [];
+        setFavorites(new Set(favoritesList));
+      }
+    });
 
-  const isRsvpd = (eventId: string) => {
-    return rsvpEvents.includes(eventId);
-  };
+    return () => unsubscribe();
+  }, [currentUser]);
 
-  const toggleFavorite = (eventId: string) => {
-    setFavoriteEvents((prev) =>
-      prev.includes(eventId)
-        ? prev.filter((id) => id !== eventId)
-        : [...prev, eventId]
-    );
-  };
-
-  const isFavorite = (eventId: string) => {
-    return favoriteEvents.includes(eventId);
-  };
-
-  const toggleNotifications = () => {
+  const toggleNotifications = async () => {
     const newStatus = !notificationsEnabled;
+    
+    if (newStatus && currentUser) {
+      // Request permission and get FCM token
+      await requestNotificationPermission(currentUser.uid);
+    }
+    
     setNotificationsEnabled(newStatus);
     localStorage.setItem('notificationsEnabled', JSON.stringify(newStatus));
   };
 
+  const isFavorite = (eventId: string): boolean => {
+    return favorites.has(eventId);
+  };
+
+  const toggleFavorite = async (eventId: string): Promise<void> => {
+    if (!currentUser) return;
+
+    const userRef = doc(firestore, 'users', currentUser.uid);
+    const newFavorites = new Set(favorites);
+
+    if (favorites.has(eventId)) {
+      newFavorites.delete(eventId);
+    } else {
+      newFavorites.add(eventId);
+    }
+
+    // Update Firestore
+    await setDoc(
+      userRef,
+      {
+        favorites: Array.from(newFavorites),
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // Update local state immediately for better UX
+    setFavorites(newFavorites);
+  };
+
+  const logout = async (): Promise<void> => {
+    if (auth) {
+      await auth.signOut();
+    }
+  };
 
   return (
     <AppContext.Provider
       value={{
         currentUser,
-        login,
-        logout,
-        signup,
-        rsvpEvents,
-        favoriteEvents,
-        addRsvp,
-        isRsvpd,
-        toggleFavorite,
-        isFavorite,
         notificationsEnabled,
         toggleNotifications,
+        isFavorite,
+        toggleFavorite,
+        favorites,
+        rsvpEvents,
+        favoriteEvents,
+        logout,
       }}
     >
       {children}

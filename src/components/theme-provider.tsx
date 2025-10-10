@@ -1,7 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { type ThemeProviderProps } from "next-themes/dist/types"
+
+type ThemeProviderProps = {
+  children: React.ReactNode;
+  attribute?: string;
+  defaultTheme?: string;
+  enableSystem?: boolean;
+  storageKey?: string;
+}
 
 const ThemeContext = React.createContext<
   | {

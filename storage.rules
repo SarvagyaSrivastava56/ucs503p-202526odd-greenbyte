@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    
+    function hasRole(role) {
+      return isSignedIn() && 
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isSocietyAdmin() {
+      return hasRole('society_admin') || hasRole('super_admin');
+    }
+    
+    function isSocietyAdminOf(societyId) {
+      return isSignedIn() && (
+        hasRole('super_admin') ||
+        (hasRole('society_admin') && 
+         firestore.get(/databases/(default)/documents/societies/$(societyId)).data.admins.hasAny([request.auth.uid]))
+      );
+    }
+    
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 && // Max 5MB
+             request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidFile() {
+      return request.resource.size < 10 * 1024 * 1024; // Max 10MB for general files
+    }
+    
+    // User avatars: /avatars/{userId}/{fileName}
+    match /avatars/{userId}/{fileName} {
+      allow read: if true; // Public read for avatars
+      allow write: if isOwner(userId) && isValidImage();
+      allow delete: if isOwner(userId);
+    }
+    
+    // Event posters/banners: /events/{eventId}/posters/{fileName}
+    match /events/{eventId}/posters/{fileName} {
+      allow read: if true; // Public read for event images
+      allow create: if isSocietyAdmin() && isValidImage();
+      allow update: if isSocietyAdmin() && isValidImage();
+      allow delete: if isSocietyAdmin();
+    }
+    
+    // Event chat images: /events/{eventId}/chat/{messageId}/{fileName}
+    match /events/{eventId}/chat/{messageId}/{fileName} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidImage();
+      // Chat images cannot be deleted (immutable messages)
+      allow update, delete: if false;
+    }
+    
+    // Society logos: /societies/{societyId}/logo/{fileName}
+    match /societies/{societyId}/logo/{fileName} {
+      allow read: if true; // Public read for society logos
+      allow write: if isSocietyAdminOf(societyId) && isValidImage();
+      allow delete: if isSocietyAdminOf(societyId);
+    }
+    
+    // QR codes for event check-ins: /qrcodes/{eventId}/{userId}.png
+    match /qrcodes/{eventId}/{userId}.png {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) && isValidImage();
+      allow delete: if isOwner(userId);
+    }
+    
+    // Deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

@@ -1,4 +1,5 @@
 export type UserRole = 'student' | 'society_admin' | 'super_admin';
+export type TeamRole = 'owner' | 'admin' | 'editor' | 'check-in-only';
 
 export type User = {
   id: string; // Corresponds to Firebase Auth UID
@@ -11,6 +12,9 @@ export type User = {
   deviceTokens?: string[];
   avatarUrl: string;
   password?: string;
+  displayName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type Society = {
@@ -18,7 +22,25 @@ export type Society = {
   name: string;
   description: string;
   logoUrl: string;
+  coverUrl?: string;
+  bio?: string;
   admins: string[]; // array of user UIDs
+  editors?: string[]; // array of user UIDs
+  socialLinks?: {
+    website?: string;
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    linkedin?: string;
+  };
+  settings?: {
+    allowedDomains?: string[];
+    autoApproveMembers?: boolean;
+    requireCheckIn?: boolean;
+    sendWeeklyDigest?: boolean;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type EventStatus = 'draft' | 'published' | 'archived';
@@ -48,6 +70,9 @@ export type Event = {
     checkIns: number;
   };
   isTrending?: boolean; // UI-only property
+  createdBy?: string; // User UID
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type RsvpStatus = 'rsvped' | 'waitlisted' | 'cancelled';
@@ -59,6 +84,8 @@ export type Rsvp = {
   status: RsvpStatus;
   qrCode?: string;
   checkInAt?: string; // ISO 8601 format
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ChatMessage = {
@@ -69,4 +96,62 @@ export type ChatMessage = {
   imageUrl?: string;
   createdAt: string; // ISO 8601 format
   reactions?: { [key: string]: number };
+};
+
+export type Announcement = {
+  id: string;
+  societyId: string;
+  title: string;
+  body: string;
+  targets: string[];
+  scheduledAt?: string;
+  sentAt?: string;
+  createdAt: string;
+  createdBy?: string;
+};
+
+export type TicketTier = {
+  id: string;
+  eventId: string;
+  name: string;
+  price: number;
+  capacity: number;
+  sold: number;
+  description: string;
+};
+
+export type PromoCode = {
+  id: string;
+  eventId?: string;
+  societyId: string;
+  code: string;
+  discount: number;
+  type: 'percentage' | 'fixed';
+  uses: number;
+  maxUses: number;
+  expiresAt?: string;
+  createdAt: string;
+};
+
+export type TeamMember = {
+  id: string;
+  societyId: string;
+  email: string;
+  role: TeamRole;
+  displayName?: string;
+  avatarUrl?: string;
+  invitedAt?: string;
+  joinedAt?: string;
+  status: 'pending' | 'active';
+  invitedBy?: string;
+};
+
+export type AuditLogEntry = {
+  id: string;
+  societyId: string;
+  userId: string;
+  userName: string;
+  action: string;
+  details: string;
+  timestamp: string;
 };

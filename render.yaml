@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: campus-event-hub
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        value: AIzaSyCPACZkQcMW9PxX5mkXm-wsYBlukOMAPIk
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        value: studio-827010330-91b76.firebaseapp.com
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        value: studio-827010330-91b76
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        value: studio-827010330-91b76.appspot.com
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        value: 271282670485
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        value: 1:271282670485:web:49c4913d9655adfa55c49c
+      - key: GOOGLE_GENAI_API_KEY
+        value: AIzaSyBbRE4vqqiAxtCpvwaZgdYQAiiO9c4TyGk
+      - key: GOOGLE_API_KEY
+        value: AIzaSyBbRE4vqqiAxtCpvwaZgdYQAiiO9c4TyGk
+

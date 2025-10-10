@@ -1,10 +1,11 @@
 import MainLayout from '@/components/main-layout';
 import EventDetailContent from '@/components/event-detail-content';
 
-export default function EventDetailPage({ params }: { params: { id: string } }) {
+export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <MainLayout>
-      <EventDetailContent id={params.id} />
+      <EventDetailContent id={id} />
     </MainLayout>
   );
 }

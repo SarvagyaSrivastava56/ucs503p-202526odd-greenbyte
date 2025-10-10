@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  output: 'standalone', // Enable for Docker deployments
 };
 
 export default nextConfig;

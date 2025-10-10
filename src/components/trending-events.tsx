@@ -1,18 +1,50 @@
-import { getTrendingEvents } from "@/ai/flows/trending-events-display";
+'use client';
+
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { mockEvents } from "@/lib/mock-data";
 import { EventCard } from "./event-card";
+import { getTrendingEvents } from "@/lib/firebase-queries";
+import { useEffect, useState } from "react";
+import type { Event } from "@/lib/types";
+import { EventCardSkeleton } from "./event-card-skeleton";
 
-export default async function TrendingEvents() {
-    const trendingEventsData = await getTrendingEvents();
-
-    const trendingEvents = mockEvents.filter(e => trendingEventsData.some(t => t.eventId === e.id)).map(e => ({...e, isTrending: true}));
+export default function TrendingEvents() {
+    const [trendingEvents, setTrendingEvents] = useState<Event[]>([]);
+    const [loading, setLoading] = useState(true);
     
-    if (!trendingEvents.length) {
-        // Fallback to first few mock events if AI fails or returns empty
-        trendingEvents.push(...mockEvents.slice(0, 4).map(e => ({...e, isTrending: true})));
+    useEffect(() => {
+        const fetchTrending = async () => {
+            try {
+                const events = await getTrendingEvents(6);
+                setTrendingEvents(events);
+            } catch (error) {
+                console.error('Error fetching trending events:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTrending();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="mb-12">
+                <h2 className="font-headline text-2xl font-semibold mb-4">Trending Events</h2>
+                <Carousel opts={{ align: "start", loop: true }}>
+                    <CarouselContent className="-ml-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <CarouselItem key={i} className="pl-4 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                                <EventCardSkeleton />
+                            </CarouselItem>
+                        ))}
+                    </CarouselContent>
+                </Carousel>
+            </div>
+        );
     }
 
+    if (trendingEvents.length === 0) {
+        return null;
+    }
 
     return (
         <div className="mb-12">
