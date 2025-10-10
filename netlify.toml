@@ -14,6 +14,12 @@
   NEXT_PUBLIC_FIREBASE_APP_ID = "1:271282670485:web:49c4913d9655adfa55c49c"
   GOOGLE_GENAI_API_KEY = "AIzaSyBbRE4vqqiAxtCpvwaZgdYQAiiO9c4TyGk"
   GOOGLE_API_KEY = "AIzaSyBbRE4vqqiAxtCpvwaZgdYQAiiO9c4TyGk"
+  GOOGLE_CLIENT_ID = "your-google-client-id"
+  GOOGLE_CLIENT_SECRET = "your-google-client-secret"
+  LINKTREE_CLIENT_ID = "your-linktree-client-id"
+  LINKTREE_CLIENT_SECRET = "your-linktree-client-secret"
+  WHATSAPP_ACCESS_TOKEN = "your-whatsapp-access-token"
+  WHATSAPP_VERIFY_TOKEN = "your-whatsapp-verify-token"
 
 [[redirects]]
   from = "/*"

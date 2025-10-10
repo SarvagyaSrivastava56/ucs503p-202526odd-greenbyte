@@ -24,6 +24,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { useAppContext } from '@/context/app-context';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 interface SocietyProfile {
   name: string;
@@ -375,58 +379,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Integrations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Webhook className="h-5 w-5" />
-            Integrations
-          </CardTitle>
-          <CardDescription>Connect external services and tools</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <Calendar className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="font-medium">Google Calendar</p>
-                <p className="text-sm text-muted-foreground">Auto-add events to calendar</p>
-              </div>
-            </div>
-            <Button variant="outline">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Connect
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <Mail className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="font-medium">WhatsApp</p>
-                <p className="text-sm text-muted-foreground">Share events via WhatsApp</p>
-              </div>
-            </div>
-            <Button variant="outline">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Connect
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div className="flex items-center gap-3">
-              <LinkIcon className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="font-medium">Linktree</p>
-                <p className="text-sm text-muted-foreground">Add events to your Linktree</p>
-              </div>
-            </div>
-            <Button variant="outline">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Connect
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <IntegrationsSection />
 
       {/* Webhooks */}
       <Card>
@@ -468,6 +421,267 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Integrations Section Component
+function IntegrationsSection() {
+  const { currentUser } = useAppContext();
+  const { toast } = useToast();
+  const [integrations, setIntegrations] = useState({
+    googleCalendar: { connected: false, loading: false },
+    whatsapp: { connected: false, loading: false },
+    linktree: { connected: false, loading: false },
+  });
+
+  useEffect(() => {
+    if (currentUser) {
+      checkIntegrationStatus();
+    }
+  }, [currentUser]);
+
+  const checkIntegrationStatus = async () => {
+    if (!currentUser) return;
+
+    // Check Google Calendar
+    try {
+      const response = await fetch(`/api/integrations/google-calendar/connect?userId=${currentUser.uid}`);
+      const data = await response.json();
+      setIntegrations(prev => ({
+        ...prev,
+        googleCalendar: { connected: data.connected, loading: false }
+      }));
+    } catch (error) {
+      console.error('Error checking Google Calendar status:', error);
+    }
+
+    // Check WhatsApp
+    try {
+      const response = await fetch(`/api/integrations/whatsapp/connect?userId=${currentUser.uid}`);
+      const data = await response.json();
+      setIntegrations(prev => ({
+        ...prev,
+        whatsapp: { connected: data.connected, loading: false }
+      }));
+    } catch (error) {
+      console.error('Error checking WhatsApp status:', error);
+    }
+
+    // Check Linktree
+    try {
+      const response = await fetch(`/api/integrations/linktree/connect?userId=${currentUser.uid}`);
+      const data = await response.json();
+      setIntegrations(prev => ({
+        ...prev,
+        linktree: { connected: data.connected, loading: false }
+      }));
+    } catch (error) {
+      console.error('Error checking Linktree status:', error);
+    }
+  };
+
+  const handleGoogleCalendarConnect = async () => {
+    if (!currentUser) return;
+
+    setIntegrations(prev => ({ ...prev, googleCalendar: { ...prev.googleCalendar, loading: true } }));
+
+    try {
+      // For demo mode, simulate connection
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setIntegrations(prev => ({ ...prev, googleCalendar: { connected: true, loading: false } }));
+      
+      toast({
+        title: 'Google Calendar Connected!',
+        description: 'Demo mode: Events will sync when you add real API keys',
+      });
+    } catch (error) {
+      console.error('Google Calendar connection error:', error);
+      toast({
+        title: 'Connection Failed',
+        description: 'Failed to connect Google Calendar',
+        variant: 'destructive',
+      });
+    } finally {
+      setIntegrations(prev => ({ ...prev, googleCalendar: { ...prev.googleCalendar, loading: false } }));
+    }
+  };
+
+  const handleWhatsAppConnect = async () => {
+    if (!currentUser) return;
+
+    setIntegrations(prev => ({ ...prev, whatsapp: { ...prev.whatsapp, loading: true } }));
+
+    try {
+      // For demo, we'll use a simple phone number input
+      const phoneNumber = prompt('Enter your WhatsApp phone number (with country code):\n\nExample: +1234567890');
+      if (!phoneNumber) {
+        setIntegrations(prev => ({ ...prev, whatsapp: { ...prev.whatsapp, loading: false } }));
+        return;
+      }
+
+      const response = await fetch('/api/integrations/whatsapp/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.uid,
+          phoneNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIntegrations(prev => ({ ...prev, whatsapp: { connected: true, loading: false } }));
+        toast({
+          title: 'WhatsApp Connected',
+          description: data.message,
+        });
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error('WhatsApp connection error:', error);
+      toast({
+        title: 'Connection Failed',
+        description: 'Failed to connect WhatsApp',
+        variant: 'destructive',
+      });
+      setIntegrations(prev => ({ ...prev, whatsapp: { connected: false, loading: false } }));
+    }
+  };
+
+  const handleLinktreeConnect = async () => {
+    if (!currentUser) return;
+
+    setIntegrations(prev => ({ ...prev, linktree: { ...prev.linktree, loading: true } }));
+
+    try {
+      // For demo mode, simulate connection
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      
+      setIntegrations(prev => ({ ...prev, linktree: { connected: true, loading: false } }));
+      
+      toast({
+        title: 'Linktree Connected!',
+        description: 'Demo mode: Links will be created when you add real API keys',
+      });
+    } catch (error) {
+      console.error('Linktree connection error:', error);
+      toast({
+        title: 'Connection Failed',
+        description: 'Failed to connect Linktree',
+        variant: 'destructive',
+      });
+    } finally {
+      setIntegrations(prev => ({ ...prev, linktree: { ...prev.linktree, loading: false } }));
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Webhook className="h-5 w-5" />
+          Integrations
+        </CardTitle>
+        <CardDescription>Connect external services and tools</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Google Calendar */}
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center gap-3">
+            <Calendar className="h-8 w-8 text-blue-500" />
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">Google Calendar</p>
+                {integrations.googleCalendar.connected && (
+                  <Badge variant="secondary" className="text-xs">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Connected
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">Auto-add events to calendar</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleGoogleCalendarConnect}
+            disabled={integrations.googleCalendar.loading}
+          >
+            {integrations.googleCalendar.loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="mr-2 h-4 w-4" />
+            )}
+            {integrations.googleCalendar.connected ? 'Reconnect' : 'Connect'}
+          </Button>
+        </div>
+
+        {/* WhatsApp */}
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center gap-3">
+            <Mail className="h-8 w-8 text-green-500" />
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">WhatsApp</p>
+                {integrations.whatsapp.connected && (
+                  <Badge variant="secondary" className="text-xs">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Connected
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">Share events via WhatsApp</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleWhatsAppConnect}
+            disabled={integrations.whatsapp.loading}
+          >
+            {integrations.whatsapp.loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="mr-2 h-4 w-4" />
+            )}
+            {integrations.whatsapp.connected ? 'Reconnect' : 'Connect'}
+          </Button>
+        </div>
+
+        {/* Linktree */}
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="flex items-center gap-3">
+            <LinkIcon className="h-8 w-8 text-purple-500" />
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-medium">Linktree</p>
+                {integrations.linktree.connected && (
+                  <Badge variant="secondary" className="text-xs">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Connected
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">Add events to your Linktree</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleLinktreeConnect}
+            disabled={integrations.linktree.loading}
+          >
+            {integrations.linktree.loading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ExternalLink className="mr-2 h-4 w-4" />
+            )}
+            {integrations.linktree.connected ? 'Reconnect' : 'Connect'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
