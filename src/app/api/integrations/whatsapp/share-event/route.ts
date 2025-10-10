@@ -33,6 +33,20 @@ export async function POST(request: NextRequest) {
 
     const integration = integrationDoc.data();
 
+    // Get secure token if not in demo mode
+    let accessToken = null;
+    let businessAccountId = integration.businessAccountId;
+    if (!integration.isDemo) {
+      const secureDoc = await getDoc(
+        doc(firestore, 'users', userId, 'integrations', 'whatsapp_secure')
+      );
+      if (secureDoc.exists()) {
+        const secureData = secureDoc.data();
+        accessToken = secureData.accessToken;
+        businessAccountId = secureData.businessAccountId || businessAccountId;
+      }
+    }
+
     // Get event data
     const eventDoc = await getDoc(doc(firestore, 'events', eventId));
     
@@ -60,24 +74,41 @@ export async function POST(request: NextRequest) {
       // Send to multiple recipients
       for (const phoneNumber of recipients) {
         try {
-          if (integration.isDemo) {
+          if (integration.isDemo || !accessToken) {
             // In demo mode, just generate share URLs
             const shareUrl = whatsappService.generateWebShareUrl(phoneNumber, shareMessage);
             results.shareUrls.push(shareUrl);
             results.sent++;
           } else {
-            // Send via WhatsApp Business API
-            const result = await whatsappService.sendTextMessage(
-              phoneNumber,
-              shareMessage,
-              integration.businessAccountId
+            // Send via real WhatsApp Business API
+            const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+            if (!phoneId) {
+              throw new Error('WHATSAPP_PHONE_NUMBER_ID not configured');
+            }
+
+            const sendResponse = await fetch(
+              `https://graph.facebook.com/v18.0/${phoneId}/messages`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  messaging_product: 'whatsapp',
+                  to: phoneNumber.replace(/\D/g, ''),
+                  type: 'text',
+                  text: { body: shareMessage },
+                }),
+              }
             );
 
-            if (result.success) {
+            if (sendResponse.ok) {
               results.sent++;
             } else {
+              const errorData = await sendResponse.json();
               results.failed++;
-              results.errors.push(`Failed to send to ${phoneNumber}`);
+              results.errors.push(`Failed to send to ${phoneNumber}: ${errorData.error?.message || 'Unknown error'}`);
             }
           }
         } catch (error) {

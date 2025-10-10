@@ -19,28 +19,79 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For demo purposes, we'll store the integration without actual API verification
-    // In production, you'd verify the WhatsApp Business API credentials
+    // Real WhatsApp Business API Integration
+    const whatsappAccessToken = accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+    const whatsappBusinessId = businessAccountId || process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
+
+    if (!whatsappAccessToken) {
+      return NextResponse.json({
+        error: 'WhatsApp Business API access token not configured',
+        message: 'Please add WHATSAPP_ACCESS_TOKEN to environment variables',
+      }, { status: 400 });
+    }
+
+    // Verify WhatsApp Business API credentials by making a test API call
+    let isVerified = false;
+    let businessInfo = null;
+
+    if (whatsappAccessToken && whatsappAccessToken !== 'your-whatsapp-access-token') {
+      try {
+        const verifyResponse = await fetch(
+          `https://graph.facebook.com/v18.0/${whatsappBusinessId || 'me'}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${whatsappAccessToken}`,
+            },
+          }
+        );
+
+        if (verifyResponse.ok) {
+          businessInfo = await verifyResponse.json();
+          isVerified = true;
+        }
+      } catch (verifyError) {
+        console.error('WhatsApp API verification error:', verifyError);
+      }
+    }
     
     const integrationData = {
       phoneNumber: phoneNumber.replace(/\D/g, ''), // Remove non-digits
-      businessAccountId: businessAccountId || null,
-      accessToken: accessToken || null,
+      businessAccountId: whatsappBusinessId || null,
+      accessToken: whatsappAccessToken ? '***' : null, // Don't store full token in client-visible doc
       enabled: true,
+      verified: isVerified,
+      businessInfo: businessInfo ? {
+        id: businessInfo.id,
+        name: businessInfo.name,
+      } : null,
       connectedAt: new Date().toISOString(),
-      // Demo mode flag
-      isDemo: true, // Always demo mode for presentation
+      isDemo: !isVerified, // Only demo mode if not verified
     };
 
+    // Store in Firestore
     await setDoc(
       doc(firestore, 'users', userId, 'integrations', 'whatsapp'),
       integrationData
     );
 
+    // Store full access token securely in a separate document
+    if (whatsappAccessToken && isVerified) {
+      await setDoc(
+        doc(firestore, 'users', userId, 'integrations', 'whatsapp_secure'),
+        {
+          accessToken: whatsappAccessToken,
+          businessAccountId: whatsappBusinessId,
+          updatedAt: new Date().toISOString(),
+        }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       integration: integrationData,
-      message: 'WhatsApp connected in demo mode! Generate share URLs instantly.',
+      message: isVerified 
+        ? '✅ WhatsApp Business API connected! You can now send real messages to users.'
+        : '📱 WhatsApp connected in demo mode. Add WHATSAPP_ACCESS_TOKEN for real messaging.',
     });
 
   } catch (error) {
