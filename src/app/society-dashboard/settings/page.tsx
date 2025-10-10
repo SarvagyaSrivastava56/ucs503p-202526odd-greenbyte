@@ -448,7 +448,7 @@ function IntegrationsSection() {
           setIntegrations(prev => ({ ...prev, googleCalendar: { connected: true, loading: false } }));
           toast({
             title: '🎉 Google Calendar Connected!',
-            description: 'Your Google Calendar is now synced with Campus Event Hub',
+            description: 'Your Google Calendar is now synced with Campus Event Hub. Events will automatically sync to your calendar.',
           });
         }
       } else if (event.data.type === 'oauth_error') {
@@ -545,7 +545,7 @@ function IntegrationsSection() {
 
       toast({
         title: 'Opening Google Calendar Authorization',
-        description: 'Complete the authorization in the popup window',
+        description: 'Complete the authorization in the popup window to connect your Google Calendar',
       });
     } catch (error) {
       console.error('Google Calendar connection error:', error);
