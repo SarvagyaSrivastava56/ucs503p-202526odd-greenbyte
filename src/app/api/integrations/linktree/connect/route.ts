@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { linktreeService } from '@/lib/linktree';
-import { doc, setDoc, getDoc, initializeFirestore } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 
 // Initialize Firebase for server-side usage
-let firestore: any;
-if (!getApps().length) {
-  const app = initializeApp(firebaseConfig);
-  firestore = initializeFirestore(app, {});
-} else {
-  firestore = initializeFirestore(getApps()[0], {});
-}
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+const firestore = getFirestore(app);
 
 export async function POST(request: NextRequest) {
   try {
