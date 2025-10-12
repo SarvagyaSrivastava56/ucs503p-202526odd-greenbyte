@@ -1,6 +1,6 @@
 {
-    "name": "CampusConnect",
-    "short_name": "CampusConnect",
+    "name": "UniConnect",
+    "short_name": "UniConnect",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#FBE9E7",

@@ -8,7 +8,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { PushNotifications } from '@/components/push-notifications';
 
 export const metadata: Metadata = {
-  title: 'CampusConnect',
+  title: 'UniConnect',
   description: 'Your central hub for campus events.',
   manifest: '/manifest.json',
 };

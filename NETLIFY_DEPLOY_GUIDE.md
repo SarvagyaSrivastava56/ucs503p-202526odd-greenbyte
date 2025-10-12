@@ -62,7 +62,7 @@ Value: AIzaSyBbRE4vqqiAxtCpvwaZgdYQAiiO9c4TyGk
 ```
 
 ### **Step 6: Deploy!**
-Click **"Deploy campus-event-hub"**
+Click **"Deploy uniconnect"**
 
 ---
 
@@ -82,7 +82,7 @@ Netlify will:
 
 After deployment, you'll get a URL like:
 ```
-https://campus-event-hub-xyz123.netlify.app
+https://uniconnect-xyz123.netlify.app
 ```
 
 **Features:**
@@ -140,7 +140,7 @@ Netlify has excellent docs: https://docs.netlify.com/
 
 ## 🎊 **You're Done!**
 
-Your Campus Event Hub is now:
+Your UniConnect is now:
 - ✅ Live on the internet
 - ✅ Supporting unlimited users
 - ✅ Auto-deploying on updates

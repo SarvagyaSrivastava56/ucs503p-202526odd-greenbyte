@@ -73,7 +73,7 @@ ${event.description}
 
 RSVP now: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/events/${event.id}
 
-#CampusEventHub #${event.category}`;
+#UniConnect #${event.category}`;
 
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   }

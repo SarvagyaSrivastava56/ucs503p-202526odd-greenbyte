@@ -763,7 +763,7 @@ For issues or questions:
 
 ## 📄 License
 
-Part of Campus Event Hub - All Rights Reserved
+Part of UniConnect - All Rights Reserved
 
 ---
 

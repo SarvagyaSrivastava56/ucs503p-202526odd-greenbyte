@@ -22,7 +22,7 @@ This guide will help you connect the app to your real Firebase project for fully
 ### 1. Create Firebase Project
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Click "Add Project"
-3. Name it (e.g., "Campus Event Hub")
+3. Name it (e.g., "UniConnect")
 4. Disable Google Analytics (optional)
 5. Click "Create Project"
 
@@ -55,7 +55,7 @@ This guide will help you connect the app to your real Firebase project for fully
 1. Go to Project Settings (⚙️ icon)
 2. Scroll to "Your apps"
 3. Click the Web icon `</>` 
-4. Register app (name: "Campus Event Hub Web")
+4. Register app (name: "UniConnect Web")
 5. Copy the `firebaseConfig` object
 
 ### 4. Configure Your App

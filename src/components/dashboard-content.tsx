@@ -41,7 +41,7 @@ export default function DashboardContent({ trendingEvents, recommendedEvents }: 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="font-headline text-3xl font-bold tracking-tight mb-6">
-        Welcome to CampusConnect!
+        Welcome to UniConnect!
       </h1>
       
       {trendingEvents}

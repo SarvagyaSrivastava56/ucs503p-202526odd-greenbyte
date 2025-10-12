@@ -1,4 +1,4 @@
-# 🚀 Deployment Options for Campus Event Hub
+# 🚀 Deployment Options for UniConnect
 
 Your app is ready to deploy on multiple platforms! Here are the **best free options** that support multiple concurrent users:
 
@@ -51,13 +51,13 @@ Your app is ready to deploy on multiple platforms! Here are the **best free opti
 3. Click **"New"** → **"Web Service"**
 4. Connect your GitHub repo: `p-raj2702/campus_event_hub`
 5. Configure:
-   - **Name:** campus-event-hub
+   - **Name:** uniconnect
    - **Build Command:** `npm install && npm run build`
    - **Start Command:** `npm start`
 6. **Add Environment Variables** (same as above)
 7. Click **"Create Web Service"** 🚀
 
-**Your app will be live at:** `https://campus-event-hub.onrender.com`
+**Your app will be live at:** `https://uniconnect.onrender.com`
 
 ---
 
@@ -137,7 +137,7 @@ flyctl deploy
 
 ## 🎯 **Quick Recommendation**
 
-### **For Your Campus Event Hub:**
+### **For Your UniConnect:**
 
 **Best Choice: Railway** 🚀
 - ✅ Supports multiple concurrent users on free tier

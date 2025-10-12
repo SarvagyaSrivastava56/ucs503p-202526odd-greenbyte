@@ -1,4 +1,4 @@
-# **App Name**: CampusConnect
+# **App Name**: UniConnect
 
 ## Core Features:
 

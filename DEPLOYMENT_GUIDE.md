@@ -1,4 +1,4 @@
-# 🚀 Campus Event Hub - Deployment Guide
+# 🚀 UniConnect - Deployment Guide
 
 ## ✅ Successfully Deployed on Vercel!
 
@@ -156,7 +156,7 @@ vercel domains add yourdomain.com
 
 ## 🎉 You're Live!
 
-Your Campus Event Hub is now accessible worldwide at:
+Your UniConnect is now accessible worldwide at:
 **https://campusevent-7hlf2m5j5-piyush-raj-s-projects-847bd91e.vercel.app**
 
 Share it with your campus community! 🎓

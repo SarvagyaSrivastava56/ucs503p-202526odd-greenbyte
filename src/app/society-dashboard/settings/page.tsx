@@ -448,7 +448,7 @@ function IntegrationsSection() {
           setIntegrations(prev => ({ ...prev, googleCalendar: { connected: true, loading: false } }));
           toast({
             title: '🎉 Google Calendar Connected!',
-            description: 'Your Google Calendar is now synced with Campus Event Hub. Events will automatically sync to your calendar.',
+            description: 'Your Google Calendar is now synced with UniConnect. Events will automatically sync to your calendar.',
           });
         }
       } else if (event.data.type === 'oauth_error') {

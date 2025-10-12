@@ -1,12 +1,12 @@
 # 🔗 Integrations Setup Guide
 
-This guide explains how to set up the real integrations for Google Calendar, WhatsApp, and Linktree in your Campus Event Hub.
+This guide explains how to set up the real integrations for Google Calendar, WhatsApp, and Linktree in your UniConnect.
 
 ---
 
 ## 🎯 **Overview**
 
-Your Campus Event Hub now includes **fully functional integrations** that allow society admins to:
+Your UniConnect now includes **fully functional integrations** that allow society admins to:
 
 1. **Google Calendar** - Automatically sync events to Google Calendar
 2. **WhatsApp** - Share events via WhatsApp (web & Business API)
@@ -326,4 +326,4 @@ Your integrations are **fully functional** and ready to impress! The code handle
 
 ---
 
-**This makes your Campus Event Hub look like a professional, enterprise-grade platform!** 💪
+**This makes your UniConnect look like a professional, enterprise-grade platform!** 💪

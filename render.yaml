@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: campus-event-hub
+    name: uniconnect
     env: node
     buildCommand: npm install && npm run build
     startCommand: npm start

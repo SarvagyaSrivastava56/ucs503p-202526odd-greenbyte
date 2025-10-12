@@ -67,7 +67,7 @@ export function RealAuth({ mode, onSuccess }: RealAuthProps) {
 
         toast({
           title: 'Account Created!',
-          description: `Welcome to Campus Event Hub as ${validation.role === 'society_admin' ? 'a Society Admin' : 'a Student'}`,
+          description: `Welcome to UniConnect as ${validation.role === 'society_admin' ? 'a Society Admin' : 'a Student'}`,
         });
       } else {
         await signInWithEmailAndPassword(auth, email, password);

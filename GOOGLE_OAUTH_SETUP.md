@@ -8,7 +8,7 @@
 
 2. **Create a New Project**
    - Click "Select a project" → "New Project"
-   - Project name: `Campus Event Hub`
+   - Project name: `UniConnect`
    - Click "Create"
 
 ## Step 2: Enable Google Calendar API
@@ -22,7 +22,7 @@
    - Go to "APIs & Services" → "Credentials"
    - Click "Create Credentials" → "OAuth 2.0 Client IDs"
    - Application type: "Web application"
-   - Name: "Campus Event Hub"
+   - Name: "UniConnect"
 
 ## Step 3: Configure OAuth Consent Screen
 
@@ -30,7 +30,7 @@
    - Go to "APIs & Services" → "OAuth consent screen"
    - User Type: "External" (unless you have Google Workspace)
    - Fill in required fields:
-     - App name: `Campus Event Hub`
+     - App name: `UniConnect`
      - User support email: Your email
      - Developer contact: Your email
 

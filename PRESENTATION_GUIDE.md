@@ -1,10 +1,10 @@
-# 🎓 Campus Event Hub - Presentation Guide
+# 🎓 UniConnect - Presentation Guide
 
 ## Simple Explanation for Non-Technical Audience
 
 ---
 
-## 🎯 **What is Campus Event Hub?**
+## 🎯 **What is UniConnect?**
 
 Think of it as **Instagram + Eventbrite for your campus** - but better!
 
@@ -325,7 +325,7 @@ Society admins get:
 ## 🎤 **Sample Presentation Flow**
 
 ### **Slide 1: Introduction**
-"Campus Event Hub - Making Campus Events Accessible to Everyone"
+"UniConnect - Making Campus Events Accessible to Everyone"
 
 ### **Slide 2: The Problem**
 "Students miss events because they don't know about them"

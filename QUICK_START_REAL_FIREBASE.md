@@ -34,7 +34,7 @@
 ```bash
 # Go to: https://console.firebase.google.com/
 # Click: "Add Project"
-# Name: "Campus Event Hub"
+# Name: "UniConnect"
 # Create!
 ```
 

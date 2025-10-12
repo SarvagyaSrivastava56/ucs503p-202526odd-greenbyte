@@ -63,7 +63,7 @@ export default function AppSidebar() {
         <Link href="/" className="flex items-center gap-2">
           <Icons.Logo className="size-6 text-primary" />
           <h1 className="font-headline text-lg font-semibold tracking-tight text-primary">
-            CampusConnect
+            UniConnect
           </h1>
         </Link>
       </SidebarHeader>

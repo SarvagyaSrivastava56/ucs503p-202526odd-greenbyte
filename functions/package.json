@@ -1,7 +1,7 @@
 {
   "name": "functions",
   "version": "1.0.0",
-  "description": "Cloud Functions for Campus Event Hub",
+  "description": "Cloud Functions for UniConnect",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",

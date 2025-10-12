@@ -1,4 +1,4 @@
-# 🎓 Campus Event Hub
+# 🎓 UniConnect
 
 A production-grade event management platform for campus organizations, built with Next.js 15, Firebase, and TypeScript.
 
@@ -46,7 +46,7 @@ A production-grade event management platform for campus organizations, built wit
 
 ```bash
 git clone <your-repo-url>
-cd campus_event_hub
+cd uniconnect
 npm install
 cd functions && npm install && cd ..
 ```
@@ -122,7 +122,7 @@ firebase deploy --only functions
 ## 📁 Project Structure
 
 ```
-campus_event_hub/
+uniconnect/
 ├── src/
 │   ├── app/              # Next.js App Router pages
 │   ├── components/       # React components
@@ -365,7 +365,7 @@ MIT License - see LICENSE file for details
 
 For issues and questions:
 - Open an issue on GitHub
-- Email: support@campuseventhub.com
+- Email: support@uniconnect.com
 
 ---
 
