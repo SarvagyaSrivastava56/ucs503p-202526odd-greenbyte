@@ -2,6 +2,12 @@
 
 A production-grade event management platform for campus organizations, built with Next.js 15, Firebase, and TypeScript.
 
+## 🌐 Live Demo
+
+**🚀 [View Live Demo](https://rad-profiterole-4ece65.netlify.app)**
+
+Experience UniConnect in action at: https://rad-profiterole-4ece65.netlify.app
+
 ## ✨ Features
 
 ### 🎯 Core Functionality
