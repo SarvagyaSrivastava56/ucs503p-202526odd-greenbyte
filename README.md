@@ -186,26 +186,34 @@ firebase deploy --only hosting  # Deploy only hosting
 firebase deploy --only functions # Deploy only functions
 ```
 
-## 🚢 Deployment Options
+## 🚢 Deployment
 
-### Option 1: Vercel (Recommended for Frontend)
-1. Connect your GitHub repository
-2. Set root directory to `frontend`
-3. Add environment variables
-4. Deploy
+### Netlify (Recommended)
 
-### Option 2: Netlify
-1. Connect your GitHub repository
-2. Build command: `cd frontend && npm run build`
-3. Publish directory: `frontend/.next`
-4. Add environment variables
-5. Deploy
+The project is configured for easy Netlify deployment:
 
-### Option 3: Firebase Hosting
+**Quick Deploy:**
+1. Push your code to GitHub
+2. Connect repository to Netlify
+3. Netlify auto-detects settings from `netlify.toml`
+4. Add environment variables in Netlify dashboard
+5. Deploy!
+
+**Configuration:**
+- Base directory: `frontend`
+- Build command: `npm run build`
+- Publish directory: `frontend/.next`
+- Next.js plugin included for optimal performance
+
+**Detailed instructions:** See [NETLIFY_DEPLOY.md](NETLIFY_DEPLOY.md)
+
+**Current Live Site:** https://rad-profiterole-4ece65.netlify.app
+
+### Firebase Functions
+
+Backend functions must be deployed separately:
 ```bash
-cd frontend
-npm run build
-firebase deploy --only hosting
+firebase deploy --only functions
 ```
 
 ## 📊 Tech Stack

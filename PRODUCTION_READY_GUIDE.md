@@ -175,17 +175,23 @@ Events automatically get colored badges based on category:
 
 ## 🚀 Deployment
 
-### Option 1: Vercel (Recommended)
+### Netlify (Recommended)
 ```bash
-# Install Vercel CLI
-npm i -g vercel
+# Connect your GitHub repository to Netlify
+# Netlify will auto-detect settings from netlify.toml
 
-# Deploy
-vercel
+# Or use Netlify CLI
+npm i -g netlify-cli
+netlify login
+cd frontend
+npm run build
+netlify deploy --prod --dir=.next
 
-# Add environment variables in Vercel dashboard
-# Go to Project Settings > Environment Variables
+# Add environment variables in Netlify dashboard
+# Go to Site settings > Environment variables
 ```
+
+**See [NETLIFY_DEPLOY.md](NETLIFY_DEPLOY.md) for detailed instructions.**
 
 ### Option 2: Firebase Hosting
 ```bash
@@ -263,7 +269,7 @@ firebase deploy --only hosting
 
 ### Additional Optimizations:
 1. **Caching**: Enable SWR or React Query
-2. **CDN**: Use Vercel/Cloudflare CDN
+2. **CDN**: Netlify provides automatic CDN distribution
 3. **Image CDN**: Use Cloudinary/ImgIx
 4. **Lazy Loading**: Lazy load event cards
 5. **Database**: Optimize Firestore queries
