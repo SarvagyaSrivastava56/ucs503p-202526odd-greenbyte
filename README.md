@@ -2,10 +2,6 @@
 
 A production-grade event management platform for campus organizations, built with Next.js 15, Firebase, and TypeScript.
 
-## 🌐 Live Demo
-
-**🚀 [View Live Demo](https://rad-profiterole-4ece65.netlify.app)**
-
 Experience UniConnect in action at: https://rad-profiterole-4ece65.netlify.app
 
 ## ✨ Features
@@ -138,18 +134,7 @@ cd backend
 npm run serve
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
 
-### 6. Deploy
-
-```bash
-# Deploy Cloud Functions
-firebase deploy --only functions
-
-# Build and deploy frontend (choose your platform)
-cd frontend
-npm run build
-```
 
 ## 🔐 User Roles
 
@@ -211,7 +196,7 @@ The project is configured for easy Netlify deployment:
 - Publish directory: `frontend/.next`
 - Next.js plugin included for optimal performance
 
-**Detailed instructions:** See [NETLIFY_DEPLOY.md](NETLIFY_DEPLOY.md)
+
 
 **Current Live Site:** https://rad-profiterole-4ece65.netlify.app
 
