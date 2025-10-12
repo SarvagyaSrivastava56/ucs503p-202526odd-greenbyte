@@ -24,10 +24,10 @@ export async function getTrendingEvents(): Promise<TrendingEventsOutput> {
   if (!ai) {
     return [];
   }
-  return trendingEventsFlow();
+  return trendingEventsFlow?.() || [];
 }
 
-const trendingEventsPrompt = ai ? ai.definePrompt({
+const trendingEventsPrompt = ai?.definePrompt({
   name: 'trendingEventsPrompt',
   output: {schema: TrendingEventsOutputSchema},
   prompt: `You are an AI assistant that recommends a list of trending events.
@@ -35,9 +35,8 @@ const trendingEventsPrompt = ai ? ai.definePrompt({
   Return a JSON array of trending events, ranked by popularity (number of RSVPs).
   Each object in the array should contain the eventId, eventName, and rsvpCount.
   Do not include any other information other than the eventId, eventName, and rsvpCount.
-  Limit the number of trending events to 5.
-  `,
-}) : null;
+  Limit the number of trending events to 5.`
+});
 
 const trendingEventsFlow = ai ? ai.defineFlow({
   name: 'trendingEventsFlow',

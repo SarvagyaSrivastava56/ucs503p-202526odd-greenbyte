@@ -4,6 +4,7 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getMessaging, Messaging } from 'firebase/messaging';
 
 
@@ -11,6 +12,7 @@ import { getMessaging, Messaging } from 'firebase/messaging';
 let firebaseApp: FirebaseApp;
 let auth: Auth;
 let firestore: Firestore;
+let storage: FirebaseStorage;
 let messaging: Messaging|null = null;
 
 if (!getApps().length) {
@@ -29,12 +31,13 @@ if (!getApps().length) {
 
 auth = getAuth(firebaseApp);
 firestore = getFirestore(firebaseApp);
+storage = getStorage(firebaseApp);
 if (typeof window !== 'undefined') {
     messaging = getMessaging(firebaseApp);
 }
 
 
-export { firebaseApp, auth, firestore, messaging };
+export { firebaseApp, auth, firestore, storage, messaging };
 
 
 export * from './provider';

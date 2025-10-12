@@ -76,6 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           updatedAt: serverTimestamp(),
         });
         setCurrentUser({
+          id: user.uid,
           uid: user.uid,
           name: user.displayName || user.email?.split('@')[0] || 'User',
           email: user.email || '',
@@ -83,7 +84,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           role: role,
           interests: [],
           societyIds: role === 'society_admin' ? ['society-1'] : [],
-        } as User & { uid: string });
+        });
       }
     });
 

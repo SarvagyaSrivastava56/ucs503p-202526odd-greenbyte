@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Sync, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Calendar, RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/context/app-context';
 
@@ -109,7 +109,7 @@ export function GoogleCalendarSync({ event }: GoogleCalendarSyncProps) {
               </>
             ) : (
               <>
-                <Sync className="mr-2 h-4 w-4" />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Sync to Google Calendar
               </>
             )}

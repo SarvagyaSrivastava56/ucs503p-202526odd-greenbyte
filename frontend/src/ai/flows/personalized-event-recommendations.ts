@@ -37,10 +37,10 @@ export async function getPersonalizedEventRecommendations(
   if (!ai) {
     return { recommendedEvents: [] };
   }
-  return personalizedEventRecommendationsFlow(input);
+  return personalizedEventRecommendationsFlow?.(input) || { recommendedEvents: [] };
 }
 
-const prompt = ai ? ai.definePrompt({
+const prompt = ai?.definePrompt({
   name: 'personalizedEventRecommendationsPrompt',
   input: {schema: PersonalizedEventRecommendationsInputSchema},
   output: {schema: PersonalizedEventRecommendationsOutputSchema},
@@ -49,8 +49,8 @@ const prompt = ai ? ai.definePrompt({
 User RSVPed events: {{userRsvpEvents}}
 User favorited events: {{userFavoriteEvents}}
 
-Recommend events similar to these events the user has engaged with.`,
-}) : null;
+Recommend events similar to these events the user has engaged with.`
+});
 
 const personalizedEventRecommendationsFlow = ai ? ai.defineFlow(
   {

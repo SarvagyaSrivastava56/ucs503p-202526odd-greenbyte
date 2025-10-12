@@ -159,7 +159,7 @@ RSVP now: ${process.env.NEXT_PUBLIC_APP_URL}/events/${event.id}
   /**
    * Create bulk message for event announcement
    */
-  createBulkAnnouncementMessage(event: any, recipients: string[]): string {
+  createBulkAnnouncementMessage(event: any, recipients: string[]): { message: string; recipients: string[]; type: string } {
     const message = this.createEventShareMessage(event);
     
     return {

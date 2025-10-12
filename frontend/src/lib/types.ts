@@ -3,7 +3,9 @@ export type TeamRole = 'owner' | 'admin' | 'editor' | 'check-in-only';
 
 export type User = {
   id: string; // Corresponds to Firebase Auth UID
+  uid?: string; // Firebase Auth UID (for compatibility)
   name: string;
+  displayName?: string; // Firebase display name
   email: string;
   role: UserRole;
   interests?: string[];
@@ -12,7 +14,6 @@ export type User = {
   deviceTokens?: string[];
   avatarUrl: string;
   password?: string;
-  displayName?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -55,6 +56,7 @@ export type Event = {
   venue: string;
   isOnline: boolean;
   link?: string;
+  onlineLink?: string; // Add missing onlineLink property
   bannerUrl: string;
   imageHint?: string;
   startAt: string; // ISO 8601 format
@@ -73,6 +75,9 @@ export type Event = {
   createdBy?: string; // User UID
   createdAt?: string;
   updatedAt?: string;
+  // Integration properties
+  googleCalendarEventId?: string;
+  linktreeLinkId?: string;
 };
 
 export type RsvpStatus = 'rsvped' | 'waitlisted' | 'cancelled';
