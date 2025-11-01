@@ -19,6 +19,7 @@ export function EventCard({ event }: EventCardProps) {
   const { isFavorite, toggleFavorite, currentUser } = useAppContext();
   const { toast } = useToast();
   const isEventFavorite = isFavorite(event.id);
+  const hasBanner = Boolean(event.bannerUrl && event.bannerUrl.trim().length > 0);
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -39,14 +40,18 @@ export function EventCard({ event }: EventCardProps) {
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-background/60 dark:bg-card/60 backdrop-blur-xl border-border/20">
       <Link href={`/events/${event.id}`} className="block">
         <div className="relative">
-          <Image
-            src={event.bannerUrl}
-            alt={event.title}
-            width={400}
-            height={200}
-            className="w-full h-48 object-cover"
-            data-ai-hint={event.imageHint}
-          />
+          {hasBanner ? (
+            <Image
+              src={event.bannerUrl}
+              alt={event.title}
+              width={400}
+              height={200}
+              className="w-full h-48 object-cover"
+              data-ai-hint={event.imageHint}
+            />
+          ) : (
+            <div className="w-full h-48 bg-muted" />
+          )}
           <div className="absolute top-2 right-2 flex gap-2">
             {event.isTrending && (
               <Badge

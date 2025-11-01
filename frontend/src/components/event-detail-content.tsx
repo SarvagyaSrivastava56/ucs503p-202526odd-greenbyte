@@ -26,7 +26,7 @@ import type { Event } from '@/lib/types';
 import { getEvent } from '@/lib/firebase-queries';
 import { doc, setDoc, deleteDoc, collection, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/firebase';
-import { createRsvp } from '@/lib/rsvp';
+import { createRsvp, cancelRsvp } from '@/lib/rsvp';
 
 type ChatMessage = {
   user: {
@@ -58,6 +58,7 @@ export default function EventDetailContent({ id }: { id: string }) {
   const [hasRsvpd, setHasRsvpd] = useState(false);
   const [isEventFavorite, setIsEventFavorite] = useState(false);
   const [isRsvping, setIsRsvping] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const { toast } = useToast();
 
@@ -151,6 +152,28 @@ export default function EventDetailContent({ id }: { id: string }) {
       });
     } finally {
       setIsRsvping(false);
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!user || !event || isCancelling) return;
+
+    setIsCancelling(true);
+    try {
+      await cancelRsvp(user.uid, event.id);
+      setHasRsvpd(false);
+      toast({
+        title: 'RSVP Withdrawn',
+        description: `You have withdrawn your registration for ${event.title}.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Withdraw Failed',
+        description: error?.message || 'Failed to withdraw. Please try again.',
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -324,9 +347,20 @@ export default function EventDetailContent({ id }: { id: string }) {
             <div className="flex justify-center">
                 <Confetti active={showConfetti} config={confettiConfig} />
             </div>
-            <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvp} disabled={hasRsvpd || isRsvping || !user}>
-                {isRsvping ? "Processing..." : hasRsvpd ? "You're going!" : user ? "RSVP Now" : "Login to RSVP"}
-            </Button>
+            {hasRsvpd ? (
+              <div className="flex gap-3">
+                <Button className="flex-1 text-lg h-12" disabled>
+                  You're going!
+                </Button>
+                <Button variant="outline" className="flex-1 text-lg h-12" onClick={handleWithdraw} disabled={isCancelling}>
+                  {isCancelling ? 'Withdrawing...' : 'Withdraw'}
+                </Button>
+              </div>
+            ) : (
+              <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvp} disabled={isRsvping || !user}>
+                { isRsvping ? 'Processing...' : (user ? 'RSVP Now' : 'Login to RSVP') }
+              </Button>
+            )}
             <div className="flex justify-around text-center">
               <Button variant="ghost" className="flex flex-col h-auto gap-1" onClick={handleFavoriteClick}>
                 <Heart className={cn("h-6 w-6", isEventFavorite && "text-destructive fill-destructive")} />
