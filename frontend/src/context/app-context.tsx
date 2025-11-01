@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useFirebase } from '@/firebase';
 import { requestNotificationPermission } from '@/lib/push-notifications';
-import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, collection, query, where, getDoc } from 'firebase/firestore';
 import { firestore } from '@/firebase';
 import { User } from '@/lib/types';
 
@@ -109,6 +109,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     return () => unsubscribe();
   }, [currentUser]);
+
+  // Listen to user's RSVPs in real-time
+  useEffect(() => {
+    if (!currentUser) {
+      setRsvpEvents([]);
+      return;
+    }
+
+    const rsvpsRef = collection(firestore, 'users', currentUser.uid, 'rsvps');
+    const q = query(rsvpsRef, where('status', 'in', ['rsvped', 'waitlisted']));
+    
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const eventIds = snapshot.docs.map(doc => doc.id);
+      
+      // Fetch event details for each RSVP
+      const eventPromises = eventIds.map(async (eventId) => {
+        const eventRef = doc(firestore, 'events', eventId);
+        const eventSnap = await getDoc(eventRef);
+        if (eventSnap.exists()) {
+          return { id: eventId, ...eventSnap.data() };
+        }
+        return null;
+      });
+
+      const events = await Promise.all(eventPromises);
+      setRsvpEvents(events.filter(e => e !== null));
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
+
+  // Listen to user's favorite events in real-time
+  useEffect(() => {
+    if (!currentUser || favorites.size === 0) {
+      setFavoriteEvents([]);
+      return;
+    }
+
+    const favoriteIds = Array.from(favorites);
+    
+    // Fetch event details for favorites
+    const fetchFavoriteEvents = async () => {
+      const eventPromises = favoriteIds.map(async (eventId) => {
+        const eventRef = doc(firestore, 'events', eventId);
+        const eventSnap = await getDoc(eventRef);
+        if (eventSnap.exists()) {
+          return { id: eventId, ...eventSnap.data() };
+        }
+        return null;
+      });
+
+      const events = await Promise.all(eventPromises);
+      setFavoriteEvents(events.filter(e => e !== null));
+    };
+
+    fetchFavoriteEvents();
+  }, [currentUser, favorites]);
 
   const toggleNotifications = async () => {
     const newStatus = !notificationsEnabled;
