@@ -16,12 +16,6 @@
   GOOGLE_GENAI_API_KEY = "AIzaSyBbRE4vqqiAxtCpvwaZgdYQAiiO9c4TyGk"
   GOOGLE_API_KEY = "AIzaSyBbRE4vqqiAxtCpvwaZgdYQAiiO9c4TyGk"
 
-# Redirects for SPA behavior
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # Cache static assets
 [[headers]]
   for = "/static/*"
