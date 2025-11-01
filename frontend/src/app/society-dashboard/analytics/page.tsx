@@ -260,62 +260,9 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Category Performance */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Category Performance</CardTitle>
-              <CardDescription>Events and RSVPs by category</CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => handleExport('Category Performance')}>
-              <Download className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="events"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        
 
         {/* Best Days */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Best Days</CardTitle>
-              <CardDescription>Events scheduled by day of week</CardDescription>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => handleExport('Best Days')}>
-              <Download className="h-4 w-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={bestDaysData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="events" fill="#8b5cf6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
 
         {/* Conversion Funnel */}
         <Card>
@@ -358,29 +305,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Best Times Heatmap */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Best Times</CardTitle>
-            <CardDescription>Most popular event start times</CardDescription>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => handleExport('Best Times')}>
-            <Download className="h-4 w-4" />
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={bestTimesData.filter(d => d.events > 0)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" fontSize={12} />
-              <YAxis fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="events" fill="#06b6d4" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
+      
       {/* Insights */}
       <Card>
         <CardHeader>
