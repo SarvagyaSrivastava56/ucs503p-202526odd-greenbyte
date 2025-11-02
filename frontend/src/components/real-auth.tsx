@@ -115,7 +115,7 @@ export function RealAuth({ mode, onSuccess }: RealAuthProps) {
       const provider = new GoogleAuthProvider();
       // Restrict to college domain
       provider.setCustomParameters({
-        hd: 'campus.edu', // Replace with your college domain
+        hd: 'thapar.edu', // Replace with your college domain
       });
       
       const result = await signInWithPopup(auth, provider);

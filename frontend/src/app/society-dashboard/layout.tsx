@@ -29,9 +29,9 @@ const navigation = [
   { name: 'RSVPs & Attendees', href: '/society-dashboard/rsvps', icon: Users },
   { name: 'Announcements', href: '/society-dashboard/announcements', icon: Megaphone },
   { name: 'Analytics', href: '/society-dashboard/analytics', icon: BarChart3 },
-  { name: 'Team', href: '/society-dashboard/team', icon: UserCog },
-  { name: 'Monetization', href: '/society-dashboard/monetization', icon: Ticket },
-  { name: 'Automation', href: '/society-dashboard/automation', icon: Zap },
+  // { name: 'Team', href: '/society-dashboard/team', icon: UserCog },
+  // { name: 'Monetization', href: '/society-dashboard/monetization', icon: Ticket },
+  // { name: 'Automation', href: '/society-dashboard/automation', icon: Zap },
   { name: 'Settings', href: '/society-dashboard/settings', icon: Settings },
 ];
 

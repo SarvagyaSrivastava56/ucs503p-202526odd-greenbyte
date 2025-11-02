@@ -59,16 +59,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         let role: 'student' | 'society_admin' | 'super_admin' = 'student';
         if (user.email === 'society@example.com') {
           role = 'society_admin';
-        } else if (user.email?.endsWith('@admin.campus.edu')) {
+        } else if (user.email?.endsWith('@admin.thapar.edu')) {
           role = 'super_admin';
-        } else if (user.email?.endsWith('@society.campus.edu')) {
+        } else if (user.email?.endsWith('@society.thapar.edu')) {
           role = 'society_admin';
         }
 
         setDoc(userRef, {
           name: user.displayName || user.email?.split('@')[0] || 'User',
           email: user.email,
-          avatarUrl: user.photoURL,
+          avatarUrl: user.photoURL || '',
           role: role,
           interests: [],
           societyIds: role === 'society_admin' ? ['society-1'] : [],
@@ -80,7 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           uid: user.uid,
           name: user.displayName || user.email?.split('@')[0] || 'User',
           email: user.email || '',
-          avatarUrl: user.photoURL,
+          avatarUrl: user.photoURL || '',
           role: role,
           interests: [],
           societyIds: role === 'society_admin' ? ['society-1'] : [],

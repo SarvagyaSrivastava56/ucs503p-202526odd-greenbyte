@@ -71,6 +71,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { getCountFromServer } from 'firebase/firestore';
 
 const statusColors = {
   draft: 'secondary',
@@ -89,6 +90,7 @@ export default function EventsManagementPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [rsvpCounts, setRsvpCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -102,6 +104,10 @@ export default function EventsManagementPage() {
         ...doc.data(),
       })) as Event[];
       
+      console.log("-----");
+      
+      console.log(eventsData);
+      console.log("-----");
       setEvents(eventsData);
       setFilteredEvents(eventsData);
       setLoading(false);
@@ -109,6 +115,33 @@ export default function EventsManagementPage() {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Separate request: fetch RSVP counts for currently listed events
+  useEffect(() => {
+    const fetchRsvpCounts = async () => {
+      if (filteredEvents.length === 0) return;
+      const entries = await Promise.all(
+        filteredEvents.map(async (evt) => {
+          try {
+            const rsvpsRef = collection(firestore, 'events', evt.id, 'rsvps');
+            const qy = query(rsvpsRef, where('status', '==', 'rsvped'));
+            const snap = await getCountFromServer(qy);
+            return [evt.id, snap.data().count || 0] as const;
+          } catch {
+            return [evt.id, 0] as const;
+          }
+        })
+      );
+
+      const map: Record<string, number> = {};
+      for (const [id, count] of entries) {
+        map[id] = count;
+      }
+      setRsvpCounts(map);
+    };
+
+    fetchRsvpCounts();
+  }, [filteredEvents]);
 
   // Filter events based on search and filters
   useEffect(() => {
@@ -133,6 +166,8 @@ export default function EventsManagementPage() {
     }
 
     setFilteredEvents(filtered);
+    console.log(filtered);
+    
   }, [events, searchTerm, statusFilter, categoryFilter]);
 
   const handleStatusChange = async (eventId: string, newStatus: EventStatus) => {
@@ -371,7 +406,7 @@ export default function EventsManagementPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {event.counters?.rsvpCount || 0}
+                        {rsvpCounts[event.id] ?? event.counters?.rsvpCount ?? 0}
                         <span className="text-muted-foreground">/{event.capacity}</span>
                       </TableCell>
                       <TableCell className="text-right">
