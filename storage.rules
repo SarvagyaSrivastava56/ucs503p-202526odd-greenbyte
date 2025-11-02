@@ -53,6 +53,13 @@ service firebase.storage {
       allow delete: if isSocietyAdmin();
     }
     
+    // User draft banners during event creation: /banners/{userId}/{fileName}
+    match /banners/{userId}/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(userId) && isValidImage();
+      allow delete: if isOwner(userId);
+    }
+    
     // Event chat images: /events/{eventId}/chat/{messageId}/{fileName}
     match /events/{eventId}/chat/{messageId}/{fileName} {
       allow read: if isSignedIn();

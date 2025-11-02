@@ -49,6 +49,8 @@ import { useToast } from '@/hooks/use-toast';
 import { saveEvent } from '@/lib/events';
 import { useAppContext } from '@/context/app-context';
 import Image from 'next/image';
+import { uploadImage } from '@/lib/storage';
+import { useFirebase } from '@/firebase';
 
 const categories: Category[] = [
   'Music',
@@ -90,6 +92,8 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { currentUser } = useAppContext();
+  const { user } = useFirebase();
+  const [dragActive, setDragActive] = useState(false);
 
   const defaultValues: Partial<EventFormValues> = React.useMemo(() => {
     if (eventToEdit) {
@@ -184,6 +188,21 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
     }
   };
 
+  const handleBannerUpload = async (file: File) => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'Login required', description: 'Sign in to upload images.' });
+      return;
+    }
+    try {
+      const path = `banners/${user.uid}/${Date.now()}-${file.name}`;
+      const url = await uploadImage(file, path, { maxSizeMB: 5, compress: true });
+      form.setValue('bannerUrl', url, { shouldValidate: true });
+      toast({ title: 'Banner uploaded', description: 'Your image has been uploaded.' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Upload failed', description: err?.message || 'Please try again.' });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -229,19 +248,59 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
               name="bannerUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Banner Image URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/image.png" {...field} />
-                  </FormControl>
+                  <FormLabel>Banner Image</FormLabel>
+                  <div
+                    className={cn(
+                      'rounded-md border border-dashed p-4 transition-colors',
+                      dragActive ? 'border-primary bg-primary/5' : 'border-border'
+                    )}
+                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragActive(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) { void handleBannerUpload(file); }
+                    }}
+                  >
+                    <div className="flex flex-col md:flex-row gap-3 items-center">
+                      <div className="flex-1 w-full">
+                        <FormControl>
+                          <Input placeholder="https://example.com/image.jpg" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground mt-1">Paste an image URL or drag & drop a file below.</p>
+                      </div>
+                      <div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) { void handleBannerUpload(file); }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {z.string().url().safeParse(bannerUrl).success ? (
+                      <div className="mt-3 h-32 md:h-40 relative rounded overflow-hidden bg-muted">
+                        <Image
+                          src={bannerUrl}
+                          alt="Banner preview"
+                          fill
+                          style={{ objectFit: 'cover' }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-3 h-32 md:h-40 rounded bg-muted flex items-center justify-center text-sm text-muted-foreground">
+                        No image selected
+                      </div>
+                    )}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            {z.string().url().safeParse(bannerUrl).success && (
-              <div className="relative w-full h-48 rounded-md overflow-hidden">
-                <Image src={bannerUrl} alt="Banner preview" fill style={{objectFit: 'cover'}} />
-              </div>
-            )}
+            
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <FormField
                 control={form.control}
