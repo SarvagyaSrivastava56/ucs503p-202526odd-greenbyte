@@ -130,6 +130,32 @@ export default function SocietyDashboardLayout({
 
         {/* Main content */}
         <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Mobile top nav */}
+          <div className="md:hidden sticky top-0 z-10 bg-card border-b">
+            <div className="px-4 py-3">
+              <h2 className="font-headline text-lg font-bold">Society Dashboard</h2>
+            </div>
+            <div className="flex gap-2 overflow-x-auto px-4 pb-3">
+              {navigation.map((item) => {
+                const isActive = item.exact
+                  ? pathname === item.href
+                  : pathname?.startsWith(item.href);
+                return (
+                  <Link key={item.name} href={item.href} className="shrink-0">
+                    <Button
+                      variant={isActive ? 'default' : 'outline'}
+                      size="sm"
+                      className={cn('gap-2')}
+                    >
+                      <item.icon className={cn('h-4 w-4', isActive ? 'text-primary-foreground' : 'text-muted-foreground')} />
+                      {item.name}
+                    </Button>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
           <main className="flex-1 overflow-y-auto">
             {children}
           </main>
