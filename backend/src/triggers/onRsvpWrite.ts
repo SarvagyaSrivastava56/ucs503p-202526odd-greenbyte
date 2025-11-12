@@ -8,7 +8,7 @@ import * as admin from 'firebase-admin';
 export const onRsvpWrite = functions.firestore
   .document('events/{eventId}/rsvps/{userId}')
   .onWrite(async (change, context) => {
-    const { eventId, userId } = context.params;
+    const { eventId } = context.params;
     const db = admin.firestore();
     const eventRef = db.collection('events').doc(eventId);
 

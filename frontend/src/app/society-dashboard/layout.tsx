@@ -32,6 +32,7 @@ const navigation = [
   // { name: 'Team', href: '/society-dashboard/team', icon: UserCog },
   // { name: 'Monetization', href: '/society-dashboard/monetization', icon: Ticket },
   // { name: 'Automation', href: '/society-dashboard/automation', icon: Zap },
+  { name: 'QR Check-in', href: '/society-dashboard/qr-checkin', icon: BarChart3 },
   { name: 'Settings', href: '/society-dashboard/settings', icon: Settings },
 ];
 

@@ -2,77 +2,61 @@ import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 
 interface CheckInRequest {
-  eventId: string;
-  userId: string;
-  qrCode: string;
+  payload?: string; // '{"eventId":"...","userId":"..."}'
+  eventId?: string;
+  userId?: string;
 }
 
 /**
  * HTTPS callable function to verify QR codes and check-in users to events.
- * Idempotent - can be called multiple times without duplicating check-ins.
+ * Non-strict version — any authenticated user can perform a check-in.
  */
 export const checkInVerify = functions.https.onCall(async (data: CheckInRequest, context) => {
   // Ensure user is authenticated
   if (!context.auth) {
     throw new functions.https.HttpsError(
       'unauthenticated',
-      'Must be authenticated to verify check-ins'
+      'You must be logged in to verify check-ins'
     );
   }
 
-  const { eventId, userId, qrCode } = data;
+  let eventId = data.eventId;
+  let userId = data.userId;
 
-  if (!eventId || !userId || !qrCode) {
-    throw new functions.https.HttpsError(
-      'invalid-argument',
-      'Missing required parameters: eventId, userId, qrCode'
-    );
+  // Support QR payloads as JSON string
+  if (!eventId || !userId) {
+    if (!data.payload) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Missing required parameters. Provide either payload or eventId and userId.'
+      );
+    }
+    try {
+      const parsed = JSON.parse(data.payload);
+      eventId = eventId || parsed.eventId;
+      userId = userId || parsed.userId;
+    } catch {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid JSON payload');
+    }
+  }
+
+  if (!eventId || !userId) {
+    throw new functions.https.HttpsError('invalid-argument', 'eventId and userId are required');
   }
 
   const db = admin.firestore();
 
   try {
-    // Verify caller has permission (event admin or super admin)
+    // --- Basic checks (non-strict permissions) ---
     const callerUid = context.auth.uid;
-    const callerDoc = await db.collection('users').doc(callerUid).get();
-    
-    if (!callerDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'User not found');
-    }
 
-    const callerData = callerDoc.data()!;
+    // Ensure event exists
     const eventDoc = await db.collection('events').doc(eventId).get();
-
     if (!eventDoc.exists) {
       throw new functions.https.HttpsError('not-found', 'Event not found');
     }
 
-    const eventData = eventDoc.data()!;
-    const societyId = eventData.societyId;
-
-    // Check permissions
-    const isSuperAdmin = callerData.role === 'super_admin';
-    const isSocietyAdmin = callerData.role === 'society_admin';
-    
-    if (!isSuperAdmin && !isSocietyAdmin) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Only society admins can verify check-ins'
-      );
-    }
-
-    // If society admin, verify they admin this event's society
-    if (isSocietyAdmin && !isSuperAdmin) {
-      const societyDoc = await db.collection('societies').doc(societyId).get();
-      if (!societyDoc.exists || !societyDoc.data()!.admins.includes(callerUid)) {
-        throw new functions.https.HttpsError(
-          'permission-denied',
-          'You do not have permission to check-in users for this event'
-        );
-      }
-    }
-
-    // Get RSVP document
+    // Ensure RSVP exists
     const rsvpRef = db.collection('events').doc(eventId).collection('rsvps').doc(userId);
     const rsvpDoc = await rsvpRef.get();
 
@@ -85,15 +69,12 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
 
     const rsvpData = rsvpDoc.data()!;
 
-    // Verify QR code matches
-    if (rsvpData.qrCodeUrl !== qrCode) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Invalid QR code'
-      );
+    // Warn if not RSVPed (but don’t block)
+    if (rsvpData.status !== 'rsvped') {
+      console.warn(`⚠️ User ${userId} not RSVPed — skipping strict validation.`);
     }
 
-    // Check if already checked in (idempotent)
+    // Already checked in? (idempotent)
     if (rsvpData.checkInAt) {
       return {
         success: true,
@@ -115,7 +96,7 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
       'counters.checkIns': admin.firestore.FieldValue.increment(1),
     });
 
-    console.log(`User ${userId} checked in to event ${eventId}`);
+    console.log(`✅ User ${userId} checked in to event ${eventId} by ${callerUid}`);
 
     return {
       success: true,
@@ -124,15 +105,9 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
       message: 'Check-in successful',
     };
   } catch (error) {
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
-    }
-    
-    console.error('Check-in verification failed:', error);
-    throw new functions.https.HttpsError(
-      'internal',
-      'Failed to verify check-in'
-    );
+    if (error instanceof functions.https.HttpsError) throw error;
+
+    console.error('❌ Check-in verification failed:', error);
+    throw new functions.https.HttpsError('internal', 'Failed to verify check-in');
   }
 });
-

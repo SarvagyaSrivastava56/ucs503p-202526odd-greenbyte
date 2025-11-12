@@ -142,6 +142,14 @@ export default function EventDetailContent({ id }: { id: string }) {
           title: '🎉 RSVP Successful!',
           description: `You're going to ${event.title}.`,
         });
+        if (result.qrCodeUrl) {
+          const a = document.createElement('a');
+          a.href = result.qrCodeUrl;
+          a.download = `${event.title}-QR.png`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
       }
       setTimeout(() => setShowConfetti(false), 3000);
     } catch (error: any) {

@@ -30,6 +30,14 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: Rsvp
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showQrDialog, setShowQrDialog] = useState(false);
+  const handleDownload = (url: string) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${eventTitle}-QR.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
 
   useEffect(() => {
     if (user) {
@@ -85,6 +93,7 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: Rsvp
 
         if (result.qrCodeUrl) {
           setShowQrDialog(true);
+          handleDownload(result.qrCodeUrl);
         }
       } else if (result.status === 'waitlisted') {
         toast({
@@ -188,6 +197,9 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: Rsvp
                 <p className="text-sm text-muted-foreground text-center">
                   Save or screenshot this QR code for easy check-in
                 </p>
+                <Button onClick={() => handleDownload(qrCode)} size="sm">
+                  Download QR
+                </Button>
               </div>
             )}
           </DialogContent>
