@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { executeAutomationRule } from './onAutomationRule';
+import { sendPushNotificationToUser } from '../services/push-notification-service';
 
 // @ts-ignore - unused import needed for exports
 import * as _unused from './onAutomationRule';
@@ -22,6 +23,9 @@ export const onRsvpWrite = functions.firestore
       let afterData: admin.firestore.DocumentData | null = null;
       let rsvpDelta = 0;
 
+      // Track if someone was promoted from waitlist
+      let promotedUserId: string | null = null;
+
       // Run transaction to handle concurrent updates
       await db.runTransaction(async (transaction) => {
         const eventDoc = await transaction.get(eventRef);
@@ -32,7 +36,6 @@ export const onRsvpWrite = functions.firestore
         }
 
         eventData = eventDoc.data()!;
-        const capacity = eventData.capacity || 0;
         const tempBefore = change.before.exists ? change.before.data() : null;
         const tempAfter = change.after.exists ? change.after.data() : null;
         beforeData = tempBefore || null;
@@ -64,15 +67,45 @@ export const onRsvpWrite = functions.firestore
         });
 
         console.log(`Updated RSVP count for event ${eventId}: ${currentRsvpCount} -> ${newRsvpCount}`);
-
-        // Handle waitlist promotions if someone cancelled
-        if (rsvpDelta < 0 && capacity > 0 && newRsvpCount < capacity) {
-          await promoteFromWaitlist(transaction, eventRef, eventId);
-        }
       });
+
+      // Handle waitlist promotion outside transaction (requires query)
+      // Only promote if someone cancelled (rsvpDelta < 0) and there's space
+      if (rsvpDelta < 0 && eventData) {
+        const capacity = eventData.capacity || 0;
+        if (capacity > 0) {
+          // Re-fetch event data to get latest count after transaction
+          const updatedEventDoc = await eventRef.get();
+          if (updatedEventDoc.exists) {
+            const updatedEventData = updatedEventDoc.data()!;
+            const currentRsvpCount = updatedEventData.counters?.rsvpCount || 0;
+            if (currentRsvpCount < capacity) {
+              promotedUserId = await promoteFromWaitlist(db, eventId);
+              // Note: promoteFromWaitlist will increment the count
+            }
+          }
+        }
+      }
+
+      // Send notification outside transaction
+      if (promotedUserId && eventData) {
+        sendPushNotificationToUser(promotedUserId, {
+          title: '🎉 You\'re In!',
+          body: `Great news! You've been promoted from the waitlist for "${eventData.title}"`,
+          data: {
+            eventId,
+            type: 'waitlist_promoted',
+          },
+          imageUrl: eventData.bannerUrl,
+          clickAction: `/events/${eventId}`,
+        }).catch((error) => {
+          console.error(`Failed to send waitlist promotion notification to user ${promotedUserId}:`, error);
+        });
+      }
 
       // Execute automation rules outside transaction
       if (eventData) {
+        const userId = context.params.userId;
         await executeAutomationRules(db, eventId, eventData, userId, rsvpDelta);
       }
     } catch (error) {
@@ -83,39 +116,47 @@ export const onRsvpWrite = functions.firestore
 
 /**
  * Promotes the first waitlisted user to RSVP status
+ * Returns the promoted user ID if someone was promoted
  */
 async function promoteFromWaitlist(
-  transaction: admin.firestore.Transaction,
-  eventRef: admin.firestore.DocumentReference,
+  db: admin.firestore.Firestore,
   eventId: string
-) {
-  const db = admin.firestore();
-  
-  // Find first waitlisted user
-  const waitlistQuery = db
-    .collection('events')
-    .doc(eventId)
-    .collection('rsvps')
-    .where('status', '==', 'waitlisted')
-    .orderBy('createdAt', 'asc')
-    .limit(1);
+): Promise<string | null> {
+  try {
+    // Find first waitlisted user
+    const waitlistQuery = db
+      .collection('events')
+      .doc(eventId)
+      .collection('rsvps')
+      .where('status', '==', 'waitlisted')
+      .orderBy('createdAt', 'asc')
+      .limit(1);
 
-  const waitlistSnapshot = await waitlistQuery.get();
+    const waitlistSnapshot = await waitlistQuery.get();
 
-  if (!waitlistSnapshot.empty) {
-    const firstWaitlisted = waitlistSnapshot.docs[0];
-    const userId = firstWaitlisted.id;
+    if (!waitlistSnapshot.empty) {
+      const firstWaitlisted = waitlistSnapshot.docs[0];
+      const userId = firstWaitlisted.id;
 
-    // Promote to RSVP
-    transaction.update(firstWaitlisted.ref, {
-      status: 'rsvped',
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+      // Promote to RSVP (update outside transaction)
+      await firstWaitlisted.ref.update({
+        status: 'rsvped',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
 
-    console.log(`Promoted user ${userId} from waitlist for event ${eventId}`);
+      // Increment RSVP count
+      await db.collection('events').doc(eventId).update({
+        'counters.rsvpCount': admin.firestore.FieldValue.increment(1),
+      });
 
-    // TODO: Send notification to promoted user
-    // This would integrate with FCM to notify the user
+      console.log(`Promoted user ${userId} from waitlist for event ${eventId}`);
+      return userId;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error promoting from waitlist for event ${eventId}:`, error);
+    return null;
   }
 }
 

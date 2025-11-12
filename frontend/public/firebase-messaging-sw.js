@@ -40,22 +40,40 @@ messaging.onBackgroundMessage((payload) => {
 
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
-  console.log('[firebase-messaging-sw.js] Notification click received.');
+  console.log('[firebase-messaging-sw.js] Notification click received.', event.notification.data);
   
   event.notification.close();
   
-  // Open the app or navigate to specific event
-  const urlToOpen = event.notification.data?.url || '/';
+  // Get URL from notification data (click_action, url, or eventId)
+  let urlToOpen = '/';
+  
+  if (event.notification.data) {
+    // Check for click_action first (from FCM data payload)
+    if (event.notification.data.click_action) {
+      urlToOpen = event.notification.data.click_action;
+    } else if (event.notification.data.url) {
+      urlToOpen = event.notification.data.url;
+    } else if (event.notification.data.eventId) {
+      // Construct event URL from eventId
+      urlToOpen = `/events/${event.notification.data.eventId}`;
+    }
+  }
+  
+  // Make URL absolute if it's relative
+  if (urlToOpen.startsWith('/')) {
+    urlToOpen = self.location.origin + urlToOpen;
+  }
   
   event.waitUntil(
     clients.matchAll({
       type: 'window',
       includeUncontrolled: true
     }).then((windowClients) => {
-      // Check if there's already a window/tab open
+      // Check if there's already a window/tab open with this URL
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url === urlToOpen && 'focus' in client) {
+        // Check if URL matches (accounting for origin)
+        if (client.url.includes(urlToOpen) || urlToOpen.includes(new URL(client.url).pathname)) {
           return client.focus();
         }
       }
