@@ -157,7 +157,7 @@ export default function SocietyDashboardPage() {
               {todayEvents.map((event) => (
                 <Link 
                   key={event.id} 
-                  href={`/society-dashboard/events/${event.id}`}
+                  href={`/events/${event.id}`}
                   className="flex items-center justify-between p-3 rounded-lg bg-background hover:bg-accent transition-colors"
                 >
                   <div>
