@@ -23,7 +23,6 @@ import {
   BarChart3,
   TrendingUp,
   Users,
-  Eye,
   Calendar,
   Download,
   UserCheck,
@@ -86,7 +85,6 @@ export default function AnalyticsPage() {
   // Event performance over time
   const eventPerformance = events.slice(0, 10).map(event => ({
     name: event.title.substring(0, 15) + '...',
-    views: event.counters?.views || 0,
     rsvps: event.counters?.rsvpCount || 0,
     checkIns: event.counters?.checkIns || 0,
   }));
@@ -121,23 +119,19 @@ export default function AnalyticsPage() {
   }));
 
   // Conversion funnel
-  const totalViews = events.reduce((acc, e) => acc + (e.counters?.views || 0), 0);
   const totalRSVPs = events.reduce((acc, e) => acc + (e.counters?.rsvpCount || 0), 0);
   const totalCheckIns = events.reduce((acc, e) => acc + (e.counters?.checkIns || 0), 0);
 
   const funnelData = [
-    { name: 'Views', value: totalViews, percentage: 100 },
-    { name: 'RSVPs', value: totalRSVPs, percentage: totalViews > 0 ? (totalRSVPs / totalViews) * 100 : 0 },
+    { name: 'RSVPs', value: totalRSVPs, percentage: 100 },
     { name: 'Check-ins', value: totalCheckIns, percentage: totalRSVPs > 0 ? (totalCheckIns / totalRSVPs) * 100 : 0 },
   ];
 
   // Stats
   const stats = {
     totalEvents: events.length,
-    totalViews,
     totalRSVPs,
     totalCheckIns,
-    avgRSVPRate: totalViews > 0 ? ((totalRSVPs / totalViews) * 100).toFixed(1) : 0,
     avgAttendanceRate: totalRSVPs > 0 ? ((totalCheckIns / totalRSVPs) * 100).toFixed(1) : 0,
   };
 
@@ -187,30 +181,13 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Total Views
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalViews.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Event page views
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4" />
-              RSVP Rate
+              Total RSVPs
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.avgRSVPRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {stats.totalRSVPs.toLocaleString()} total RSVPs
-            </p>
+            <div className="text-2xl font-bold">{stats.totalRSVPs.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground mt-1">Across all events</p>
           </CardContent>
         </Card>
 
@@ -237,7 +214,7 @@ export default function AnalyticsPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Event Performance</CardTitle>
-              <CardDescription>Views, RSVPs, and check-ins per event</CardDescription>
+              <CardDescription>RSVPs and check-ins per event</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => handleExport('Event Performance')}>
               <Download className="h-4 w-4" />
@@ -251,7 +228,6 @@ export default function AnalyticsPage() {
                 <YAxis fontSize={12} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="views" fill="#8b5cf6" name="Views" />
                 <Bar dataKey="rsvps" fill="#06b6d4" name="RSVPs" />
                 <Bar dataKey="checkIns" fill="#10b981" name="Check-ins" />
               </BarChart>
@@ -269,7 +245,7 @@ export default function AnalyticsPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Conversion Funnel</CardTitle>
-              <CardDescription>From views to attendance</CardDescription>
+              <CardDescription>From RSVPs to attendance</CardDescription>
             </div>
             <Button variant="outline" size="sm" onClick={() => handleExport('Conversion Funnel')}>
               <Download className="h-4 w-4" />
@@ -282,7 +258,7 @@ export default function AnalyticsPage() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="font-medium">{stage.name}</span>
                     <span className="text-muted-foreground">
-                      {stage.value.toLocaleString()} ({stage.percentage.toFixed(1)}%)
+                      {stage.value.toLocaleString()} {index > 0 && `(${stage.percentage.toFixed(1)}%)`}
                     </span>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-8 relative overflow-hidden">
@@ -316,10 +292,8 @@ export default function AnalyticsPage() {
           <div className="flex items-start gap-3 p-4 border rounded-lg">
             <TrendingUp className="h-5 w-5 text-green-500 mt-0.5" />
             <div>
-              <h4 className="font-medium">Strong RSVP Rate</h4>
-              <p className="text-sm text-muted-foreground">
-                Your RSVP conversion rate of {stats.avgRSVPRate}% is above average
-              </p>
+              <h4 className="font-medium">RSVPs</h4>
+              <p className="text-sm text-muted-foreground">{stats.totalRSVPs.toLocaleString()} RSVPs recorded</p>
             </div>
           </div>
           
