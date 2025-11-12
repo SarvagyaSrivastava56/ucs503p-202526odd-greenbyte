@@ -15,21 +15,25 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { SponsorAd } from '@/lib/types';
+import { SponsorAdModal } from '@/components/sponsor-ad-modal';
 
 interface RsvpButtonProps {
   eventId: string;
   eventTitle: string;
   capacity: number;
   currentRsvps: number;
+  sponsorAd?: SponsorAd;
 }
 
-export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: RsvpButtonProps) {
+export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps, sponsorAd }: RsvpButtonProps) {
   const { user } = useFirebase();
   const { toast } = useToast();
   const [status, setStatus] = useState<RsvpStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showQrDialog, setShowQrDialog] = useState(false);
+  const [showSponsorModal, setShowSponsorModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -53,13 +57,8 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: Rsvp
     }
   };
 
-  const handleRsvp = async () => {
+  const performRsvp = async () => {
     if (!user) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Required',
-        description: 'Please sign in to RSVP to events.',
-      });
       return;
     }
 
@@ -103,6 +102,28 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: Rsvp
     }
   };
 
+  const handleRsvpClick = () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'Please sign in to RSVP to events.',
+      });
+      return;
+    }
+
+    if (loading) {
+      return;
+    }
+
+    if (sponsorAd?.videoUrl) {
+      setShowSponsorModal(true);
+      return;
+    }
+
+    void performRsvp();
+  };
+
   const handleCancel = async () => {
     if (!user) return;
 
@@ -130,7 +151,7 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: Rsvp
 
   if (!user) {
     return (
-      <Button onClick={handleRsvp} size="lg" className="w-full sm:w-auto">
+      <Button onClick={handleRsvpClick} size="lg" className="w-full sm:w-auto">
         Sign In to RSVP
       </Button>
     );
@@ -219,14 +240,27 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps }: Rsvp
   const isFull = currentRsvps >= capacity && capacity > 0;
 
   return (
-    <Button
-      onClick={handleRsvp}
-      size="lg"
-      className="w-full sm:w-auto"
-      variant={isFull ? 'secondary' : 'default'}
-    >
-      {isFull ? 'Join Waitlist' : 'RSVP Now'}
-    </Button>
+    <>
+      <Button
+        onClick={handleRsvpClick}
+        size="lg"
+        className="w-full sm:w-auto"
+        variant={isFull ? 'secondary' : 'default'}
+      >
+        {isFull ? 'Join Waitlist' : 'RSVP Now'}
+      </Button>
+
+      {sponsorAd?.videoUrl && (
+        <SponsorAdModal
+          ad={sponsorAd}
+          open={showSponsorModal}
+          onContinue={() => {
+            setShowSponsorModal(false);
+            void performRsvp();
+          }}
+        />
+      )}
+    </>
   );
 }
 

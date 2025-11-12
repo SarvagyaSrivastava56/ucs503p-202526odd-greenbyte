@@ -47,6 +47,16 @@ export type Society = {
 export type EventStatus = 'draft' | 'published' | 'archived';
 export type Category = 'Music' | 'Tech' | 'Art' | 'Sports' | 'Workshop' | 'Social' | 'Conference' | 'Party' | 'Networking';
 
+export type SponsorAd = {
+  videoUrl: string;
+  thumbnailUrl?: string;
+  headline?: string;
+  description?: string;
+  ctaText?: string;
+  clickUrl?: string;
+  autoCloseSeconds?: number;
+};
+
 export type Event = {
   id: string;
   title: string;
@@ -78,6 +88,7 @@ export type Event = {
   // Integration properties
   googleCalendarEventId?: string;
   linktreeLinkId?: string;
+  sponsorAd?: SponsorAd;
 };
 
 export type RsvpStatus = 'rsvped' | 'waitlisted' | 'cancelled';
@@ -87,7 +98,8 @@ export type Rsvp = {
   userId: string;
   eventId: string;
   status: RsvpStatus;
-  qrCode?: string;
+  qrCodeUrl?: string;
+  qrCodeData?: string;
   checkInAt?: string; // ISO 8601 format
   createdAt?: string;
   updatedAt?: string;
@@ -151,6 +163,27 @@ export type TeamMember = {
   invitedBy?: string;
 };
 
+export type AutomationTrigger = 'rsvp_created' | 'check_in' | 'capacity_reached' | 'before_event' | 'after_event';
+export type AutomationAction = 'send_email' | 'send_notification' | 'close_registration' | 'open_waitlist' | 'send_thank_you';
+
+export type AutomationRule = {
+  id: string;
+  societyId: string;
+  name: string;
+  trigger: AutomationTrigger;
+  action: AutomationAction;
+  enabled: boolean;
+  config?: {
+    timeOffset?: number; // for before_event/after_event triggers (in minutes)
+    emailTemplate?: string; // for send_email action
+    subject?: string; // for send_email action
+    body?: string; // for send_email action
+  };
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+};
+
 export type AuditLogEntry = {
   id: string;
   societyId: string;
@@ -159,4 +192,24 @@ export type AuditLogEntry = {
   action: string;
   details: string;
   timestamp: string;
+};
+
+export type UserNotificationType =
+  | 'event_published'
+  | 'event_updated'
+  | 'event_reminder'
+  | 'sponsor_highlight'
+  | 'automation';
+
+export type UserNotification = {
+  id: string;
+  type: UserNotificationType;
+  title: string;
+  body: string;
+  eventId?: string;
+  url?: string;
+  read: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  metadata?: Record<string, unknown>;
 };

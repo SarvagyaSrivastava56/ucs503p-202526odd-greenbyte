@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 interface CheckInRequest {
   eventId: string;
   userId: string;
-  qrCode: string;
+  qrData: string;
 }
 
 /**
@@ -20,12 +20,12 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
     );
   }
 
-  const { eventId, userId, qrCode } = data;
+  const { eventId, userId, qrData } = data;
 
-  if (!eventId || !userId || !qrCode) {
+  if (!eventId || !userId || !qrData) {
     throw new functions.https.HttpsError(
       'invalid-argument',
-      'Missing required parameters: eventId, userId, qrCode'
+      'Missing required parameters: eventId, userId, qrData'
     );
   }
 
@@ -85,12 +85,40 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
 
     const rsvpData = rsvpDoc.data()!;
 
-    // Verify QR code matches
-    if (rsvpData.qrCodeUrl !== qrCode) {
+    const attendeeDoc = await db.collection('users').doc(userId).get();
+    const attendeeData = attendeeDoc.exists ? attendeeDoc.data() : null;
+
+    let parsedPayload: { eventId: string; userId: string };
+    try {
+      parsedPayload = JSON.parse(qrData);
+    } catch (err) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid QR payload');
+    }
+
+    if (parsedPayload.eventId !== eventId || parsedPayload.userId !== userId) {
       throw new functions.https.HttpsError(
         'permission-denied',
-        'Invalid QR code'
+        'QR code does not match this attendee or event'
       );
+    }
+
+    const storedPayload = rsvpData.qrCodeData as string | undefined;
+
+    if (storedPayload) {
+      if (storedPayload !== qrData) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Invalid QR code'
+        );
+      }
+    } else {
+      // Backwards compatibility: fall back to comparing encoded data URL
+      if (rsvpData.qrCodeUrl !== qrData) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Invalid QR code'
+        );
+      }
     }
 
     // Check if already checked in (idempotent)
@@ -98,8 +126,19 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
       return {
         success: true,
         alreadyCheckedIn: true,
-        checkInAt: rsvpData.checkInAt,
+        checkInAt: rsvpData.checkInAt.toDate ? rsvpData.checkInAt.toDate().toISOString() : rsvpData.checkInAt,
         message: 'User already checked in',
+        attendee: attendeeData
+          ? {
+              id: userId,
+              name: attendeeData.displayName || attendeeData.name || attendeeData.email || 'Attendee',
+              email: attendeeData.email || '',
+            }
+          : {
+              id: userId,
+              name: 'Attendee',
+              email: '',
+            },
       };
     }
 
@@ -122,6 +161,17 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
       alreadyCheckedIn: false,
       checkInAt: checkInTime.toDate().toISOString(),
       message: 'Check-in successful',
+      attendee: attendeeData
+        ? {
+            id: userId,
+            name: attendeeData.displayName || attendeeData.name || attendeeData.email || 'Attendee',
+            email: attendeeData.email || '',
+          }
+        : {
+            id: userId,
+            name: 'Attendee',
+            email: '',
+          },
     };
   } catch (error) {
     if (error instanceof functions.https.HttpsError) {

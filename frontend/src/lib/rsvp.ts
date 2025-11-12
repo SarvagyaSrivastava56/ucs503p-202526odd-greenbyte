@@ -9,6 +9,7 @@ export interface RsvpData {
   eventId: string;
   status: RsvpStatus;
   qrCodeUrl?: string;
+  qrCodeData?: string;
   checkInAt?: string;
   createdAt: any;
   updatedAt: any;
@@ -17,7 +18,7 @@ export interface RsvpData {
 /**
  * Creates or updates an RSVP for an event
  */
-export async function createRsvp(userId: string, eventId: string): Promise<{ status: RsvpStatus; qrCodeUrl?: string }> {
+export async function createRsvp(userId: string, eventId: string): Promise<{ status: RsvpStatus; qrCodeUrl?: string; qrCodeData?: string }> {
   // Get event data to check capacity
   const eventRef = doc(firestore, 'events', eventId);
   const eventSnap = await getDoc(eventRef);
@@ -35,9 +36,15 @@ export async function createRsvp(userId: string, eventId: string): Promise<{ sta
 
   // Generate QR code for RSVPed users
   let qrCodeUrl: string | undefined;
+  let qrCodeData: string | undefined;
   if (status === 'rsvped') {
-    const qrData = JSON.stringify({ eventId, userId, timestamp: Date.now() });
-    qrCodeUrl = await QRCode.toDataURL(qrData, {
+    const payload = {
+      eventId,
+      userId,
+      issuedAt: Date.now(),
+    };
+    qrCodeData = JSON.stringify(payload);
+    qrCodeUrl = await QRCode.toDataURL(qrCodeData, {
       errorCorrectionLevel: 'H',
       width: 300,
       color: {
@@ -54,6 +61,7 @@ export async function createRsvp(userId: string, eventId: string): Promise<{ sta
     eventId,
     status,
     qrCodeUrl: qrCodeUrl || null,
+    qrCodeData: qrCodeData || null,
     checkInAt: null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -68,7 +76,7 @@ export async function createRsvp(userId: string, eventId: string): Promise<{ sta
     updatedAt: serverTimestamp(),
   });
 
-  return { status, qrCodeUrl };
+  return { status, qrCodeUrl, qrCodeData };
 }
 
 /**

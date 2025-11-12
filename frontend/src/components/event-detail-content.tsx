@@ -27,6 +27,7 @@ import { getEvent } from '@/lib/firebase-queries';
 import { doc, setDoc, deleteDoc, collection, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '@/firebase';
 import { createRsvp, cancelRsvp } from '@/lib/rsvp';
+import { SponsorAdModal } from '@/components/sponsor-ad-modal';
 
 type ChatMessage = {
   user: {
@@ -58,6 +59,7 @@ export default function EventDetailContent({ id }: { id: string }) {
   const [hasRsvpd, setHasRsvpd] = useState(false);
   const [isEventFavorite, setIsEventFavorite] = useState(false);
   const [isRsvping, setIsRsvping] = useState(false);
+  const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
   const { toast } = useToast();
@@ -124,9 +126,9 @@ export default function EventDetailContent({ id }: { id: string }) {
     return () => unsubscribe();
   }, [id]);
 
-  const handleRsvp = async () => {
+  const performRsvp = async () => {
     if (!user || !event || hasRsvpd || isRsvping) return;
-    
+
     setIsRsvping(true);
     try {
       const result = await createRsvp(user.uid, event.id);
@@ -153,6 +155,28 @@ export default function EventDetailContent({ id }: { id: string }) {
     } finally {
       setIsRsvping(false);
     }
+  };
+
+  const handleRsvpClick = () => {
+    if (!event || hasRsvpd || isRsvping) {
+      return;
+    }
+
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication required',
+        description: 'Please sign in to RSVP to this event.',
+      });
+      return;
+    }
+
+    if (event.sponsorAd?.videoUrl) {
+      setShowSponsorModal(true);
+      return;
+    }
+
+    void performRsvp();
   };
 
   const handleWithdraw = async () => {
@@ -357,7 +381,7 @@ export default function EventDetailContent({ id }: { id: string }) {
                 </Button>
               </div>
             ) : (
-              <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvp} disabled={isRsvping || !user}>
+              <Button className="w-full text-lg h-12 mb-4" onClick={handleRsvpClick} disabled={isRsvping}>
                 { isRsvping ? 'Processing...' : (user ? 'RSVP Now' : 'Login to RSVP') }
               </Button>
             )}
@@ -402,6 +426,17 @@ export default function EventDetailContent({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      {event?.sponsorAd?.videoUrl && (
+        <SponsorAdModal
+          ad={event.sponsorAd}
+          open={showSponsorModal}
+          onContinue={() => {
+            setShowSponsorModal(false);
+            void performRsvp();
+          }}
+        />
+      )}
     </div>
   );
 }

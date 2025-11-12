@@ -3,22 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useFirebase } from '@/firebase';
 import { firestore } from '@/firebase';
-import { 
-  collection, 
+import {
+  collection,
   query,
   getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
-  serverTimestamp,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   UserPlus,
   Mail,
   Shield,
@@ -64,6 +63,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
+import { useAppContext } from '@/context/app-context';
 
 type TeamRole = 'owner' | 'admin' | 'editor' | 'check-in-only';
 
@@ -101,54 +101,74 @@ const roleDescriptions = {
   'check-in-only': 'Can only check-in attendees',
 };
 
+const isSocietyAdminRole = (role?: string | null): boolean => role === 'society_admin' || role === 'super_admin';
+
 export default function TeamManagementPage() {
   const { user } = useFirebase();
+  const { currentUser } = useAppContext();
   const { toast } = useToast();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Form state
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<TeamRole>('editor');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
+  const [accessDenied, setAccessDenied] = useState<string | null>(null);
+
+  const hasSocietyAccess = isSocietyAdminRole(currentUser?.role);
+  const societyId = currentUser?.societyIds?.[0] || null;
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !hasSocietyAccess || !societyId) {
+      setTeamMembers([]);
+      setAuditLog([]);
+      setLoading(false);
+      if (!hasSocietyAccess) {
+        setAccessDenied('You need a society admin account to manage team members.');
+      } else if (!societyId) {
+        setAccessDenied('No society is linked to your account yet. Ask a super admin to add you.');
+      } else {
+        setAccessDenied(null);
+      }
+      return;
+    }
 
-    // Fetch team members
+    setAccessDenied(null);
+
     const fetchTeamMembers = async () => {
       try {
-        const membersRef = collection(firestore, 'societies', 'default', 'team');
+        const membersRef = collection(firestore, 'societies', societyId, 'team');
         const membersSnapshot = await getDocs(membersRef);
-        
-        const members = membersSnapshot.docs.map(doc => ({
+
+        const members = membersSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as TeamMember[];
-        
+
         setTeamMembers(members);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching team members:', error);
         setLoading(false);
+        setAccessDenied('Unable to load team members. Check your permissions or try again later.');
       }
     };
 
-    // Fetch audit log
     const fetchAuditLog = async () => {
       try {
-        const logRef = collection(firestore, 'societies', 'default', 'auditLog');
+        const logRef = collection(firestore, 'societies', societyId, 'auditLog');
         const logSnapshot = await getDocs(query(logRef));
-        
-        const log = logSnapshot.docs.map(doc => ({
+
+        const log = logSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as AuditLogEntry[];
-        
-        setAuditLog(log.slice(0, 10)); // Show latest 10 entries
+
+        setAuditLog(log.slice(0, 10));
       } catch (error) {
         console.error('Error fetching audit log:', error);
       }
@@ -156,7 +176,7 @@ export default function TeamManagementPage() {
 
     fetchTeamMembers();
     fetchAuditLog();
-  }, [user]);
+  }, [user, hasSocietyAccess, societyId]);
 
   const handleInviteMember = async () => {
     if (!inviteEmail) {
@@ -168,24 +188,33 @@ export default function TeamManagementPage() {
       return;
     }
 
+    if (!societyId) {
+      toast({
+        title: 'Error',
+        description: 'No society selected.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      const membersRef = collection(firestore, 'societies', 'default', 'team');
-      
+      const membersRef = collection(firestore, 'societies', societyId, 'team');
+
       const newMember = {
         email: inviteEmail,
         role: inviteRole,
         status: 'pending',
         invitedAt: new Date().toISOString(),
-        invitedBy: user?.id || 'unknown',
+        invitedBy: user?.uid || 'unknown',
       };
 
       await addDoc(membersRef, newMember);
 
       // Log the action
-      const logRef = collection(firestore, 'societies', 'default', 'auditLog');
+      const logRef = collection(firestore, 'societies', societyId, 'auditLog');
       await addDoc(logRef, {
-        userId: user?.id || 'unknown',
-        userName: user?.name || 'Unknown',
+        userId: user?.uid || 'unknown',
+        userName: user?.displayName || 'Unknown',
         action: 'INVITE_MEMBER',
         details: `Invited ${inviteEmail} as ${inviteRole}`,
         timestamp: new Date().toISOString(),
@@ -199,13 +228,15 @@ export default function TeamManagementPage() {
       setInviteEmail('');
       setInviteRole('editor');
       setInviteDialogOpen(false);
-      
+
       // Refresh team members
       const membersSnapshot = await getDocs(membersRef);
-      setTeamMembers(membersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as TeamMember[]);
+      setTeamMembers(
+        membersSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as TeamMember[]
+      );
     } catch (error) {
       console.error('Error inviting member:', error);
       toast({
@@ -217,21 +248,29 @@ export default function TeamManagementPage() {
   };
 
   const handleUpdateRole = async (memberId: string, newRole: TeamRole) => {
+    if (!societyId) {
+      toast({
+        title: 'Error',
+        description: 'No society selected.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
-      const memberRef = doc(firestore, 'societies', 'default', 'team', memberId);
+      const memberRef = doc(firestore, 'societies', societyId, 'team', memberId);
       await updateDoc(memberRef, { role: newRole });
 
       // Log the action
-      const logRef = collection(firestore, 'societies', 'default', 'auditLog');
+      const logRef = collection(firestore, 'societies', societyId, 'auditLog');
       await addDoc(logRef, {
-        userId: user?.id || 'unknown',
-        userName: user?.name || 'Unknown',
+        userId: user?.uid || 'unknown',
+        userName: user?.displayName || 'Unknown',
         action: 'UPDATE_ROLE',
         details: `Changed role to ${newRole}`,
         timestamp: new Date().toISOString(),
       });
 
-      setTeamMembers(prev => prev.map(m => 
+      setTeamMembers(prev => prev.map(m =>
         m.id === memberId ? { ...m, role: newRole } : m
       ));
 
@@ -251,15 +290,23 @@ export default function TeamManagementPage() {
 
   const handleDeleteMember = async () => {
     if (!memberToDelete) return;
+    if (!societyId) {
+      toast({
+        title: 'Error',
+        description: 'No society selected.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
-      await deleteDoc(doc(firestore, 'societies', 'default', 'team', memberToDelete.id));
+      await deleteDoc(doc(firestore, 'societies', societyId, 'team', memberToDelete.id));
 
       // Log the action
-      const logRef = collection(firestore, 'societies', 'default', 'auditLog');
+      const logRef = collection(firestore, 'societies', societyId, 'auditLog');
       await addDoc(logRef, {
-        userId: user?.id || 'unknown',
-        userName: user?.name || 'Unknown',
+        userId: user?.uid || 'unknown',
+        userName: user?.displayName || 'Unknown',
         action: 'REMOVE_MEMBER',
         details: `Removed ${memberToDelete.email}`,
         timestamp: new Date().toISOString(),
@@ -294,7 +341,7 @@ export default function TeamManagementPage() {
         </div>
         <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button disabled={!hasSocietyAccess || !societyId}>
               <UserPlus className="mr-2 h-4 w-4" />
               Invite Member
             </Button>
@@ -335,7 +382,7 @@ export default function TeamManagementPage() {
               <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleInviteMember}>
+              <Button onClick={handleInviteMember} disabled={!societyId || !hasSocietyAccess}>
                 <Mail className="mr-2 h-4 w-4" />
                 Send Invitation
               </Button>
@@ -343,6 +390,14 @@ export default function TeamManagementPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Access Denied Message */}
+      {accessDenied && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <strong className="font-bold">Access Denied!</strong>
+          <span className="block sm:inline"> {accessDenied}</span>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -438,7 +493,7 @@ export default function TeamManagementPage() {
                       <Select
                         value={member.role}
                         onValueChange={(value) => handleUpdateRole(member.id, value as TeamRole)}
-                        disabled={member.role === 'owner'}
+                        disabled={!hasSocietyAccess || !societyId || member.role === 'owner'}
                       >
                         <SelectTrigger className="w-[180px]">
                           <SelectValue />
@@ -457,7 +512,7 @@ export default function TeamManagementPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {member.joinedAt 
+                      {member.joinedAt
                         ? format(new Date(member.joinedAt), 'MMM d, yyyy')
                         : member.invitedAt
                           ? `Invited ${format(new Date(member.invitedAt), 'MMM d, yyyy')}`
@@ -473,6 +528,7 @@ export default function TeamManagementPage() {
                             setMemberToDelete(member);
                             setDeleteDialogOpen(true);
                           }}
+                          disabled={!hasSocietyAccess || !societyId}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>

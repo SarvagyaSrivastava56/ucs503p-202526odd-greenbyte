@@ -36,7 +36,7 @@ export const weeklyDigest = functions.pubsub
       const allEvents = eventsSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      }));
+      })) as any[];
 
       console.log(`Found ${allEvents.length} upcoming events`);
 

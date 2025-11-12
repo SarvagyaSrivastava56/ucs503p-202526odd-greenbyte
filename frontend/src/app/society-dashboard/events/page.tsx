@@ -56,6 +56,7 @@ import {
   Calendar,
   Users,
   CheckCircle2,
+  Scan,
 } from 'lucide-react';
 import Link from 'next/link';
 import { format, parseISO } from 'date-fns';
@@ -402,6 +403,13 @@ export default function EventsManagementPage() {
                                 Edit
                               </Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/society-dashboard/events/${event.id}/check-in`}>
+                                <Scan className="mr-2 h-4 w-4" />
+                                Check-in Mode
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleDuplicateEvent(event)}>
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicate
