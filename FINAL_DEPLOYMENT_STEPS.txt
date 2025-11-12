@@ -1,0 +1,19 @@
+FINAL STEPS TO DEPLOY AUTOMATION SYSTEM
+=========================================
+
+Open your Terminal app and run these commands:
+
+1. cd /Users/piyushraj/campus_event_hub
+
+2. firebase login
+   (Will open browser, authorize, then come back)
+
+3. firebase deploy --only firestore:rules
+
+4. firebase deploy --only functions
+
+Then refresh http://localhost:3000/society-dashboard/automation
+
+Done!
+
+

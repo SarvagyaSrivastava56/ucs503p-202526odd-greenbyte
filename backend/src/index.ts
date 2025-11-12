@@ -5,6 +5,8 @@ admin.initializeApp();
 // Export all Cloud Functions
 export { onUserCreate } from './triggers/onUserCreate';
 export { onRsvpWrite } from './triggers/onRsvpWrite';
+export { onEventWrite } from './triggers/onEventWrite';
+export { onTeamMemberCreate } from './triggers/onTeamMemberCreate';
 export { sendReminders } from './scheduled/sendReminders';
 export { checkInVerify } from './https/checkInVerify';
 export { weeklyDigest } from './scheduled/weeklyDigest';

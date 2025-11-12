@@ -28,6 +28,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.livehome3d.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   output: 'standalone', // Enable for Docker deployments

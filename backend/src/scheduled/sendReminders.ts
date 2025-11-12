@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { sendEventReminderNotification } from '../services/push-notification-service';
 
 /**
  * Scheduled function that runs every hour to send event reminders.
@@ -75,65 +76,15 @@ async function sendEventReminders(
 
     console.log(`Sending ${timeframe} reminders to ${rsvpsSnapshot.size} users for event ${eventId}`);
 
-    // Collect all device tokens
-    const tokens: string[] = [];
+    const userIds = rsvpsSnapshot.docs.map(doc => doc.id);
 
-    for (const rsvpDoc of rsvpsSnapshot.docs) {
-      const userId = rsvpDoc.id;
-      const userDoc = await db.collection('users').doc(userId).get();
-
-      if (userDoc.exists) {
-        const userData = userDoc.data()!;
-        const userTokens = userData.deviceTokens || [];
-        tokens.push(...userTokens);
-      }
-    }
-
-    if (tokens.length === 0) {
-      console.log(`No device tokens found for event ${eventId}`);
+    if (userIds.length === 0) {
+      console.log(`No RSVPed users found for event ${eventId}`);
       return;
     }
 
-    // Send FCM notification
-    const message: admin.messaging.MulticastMessage = {
-      tokens,
-      notification: {
-        title: `Event Reminder: ${eventData.title}`,
-        body: `Your event "${eventData.title}" starts in ${timeframe}!`,
-      },
-      data: {
-        eventId,
-        type: 'event_reminder',
-        timeframe,
-      },
-      android: {
-        priority: 'high',
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1,
-          },
-        },
-      },
-    };
-
-    const response = await admin.messaging().sendEachForMulticast(message);
-    console.log(`Successfully sent ${response.successCount} reminders for event ${eventId}`);
-
-    // Clean up invalid tokens
-    if (response.failureCount > 0) {
-      const failedTokens: string[] = [];
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success && tokens[idx]) {
-          failedTokens.push(tokens[idx]);
-        }
-      });
-      
-      // TODO: Remove invalid tokens from user documents
-      console.log(`Failed to send to ${failedTokens.length} tokens`);
-    }
+    // Use the push notification service
+    await sendEventReminderNotification(eventId, eventData, userIds, timeframe);
   } catch (error) {
     console.error(`Failed to send reminders for event ${eventId}:`, error);
   }

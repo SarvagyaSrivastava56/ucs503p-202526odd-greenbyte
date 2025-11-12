@@ -1,50 +1,60 @@
 'use client';
-import { useEffect } from 'react';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { useEffect, useRef } from 'react';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAppContext } from '@/context/app-context';
+import {
+  requestNotificationPermission,
+  setupForegroundMessageListener,
+} from '@/lib/push-notifications';
 
 export function PushNotifications() {
-  const { messaging } = useFirebase();
+  const { messaging, user } = useFirebase();
   const { toast } = useToast();
   const { notificationsEnabled } = useAppContext();
+  const hasRegisteredRef = useRef(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && messaging && notificationsEnabled) {
-      const requestPermission = async () => {
-        try {
-          const permission = await Notification.requestPermission();
-          if (permission === 'granted') {
-            console.log('Notification permission granted.');
-            const currentToken = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY });
-            if (currentToken) {
-              console.log('FCM Token:', currentToken);
-              // Here you would typically send this token to your server to store it.
-            } else {
-              console.log('No registration token available. Request permission to generate one.');
-            }
-          } else {
-            console.log('Unable to get permission to notify.');
-          }
-        } catch (error) {
-          console.error('An error occurred while requesting permission:', error);
-        }
-      };
+    hasRegisteredRef.current = false;
+  }, [user?.uid]);
 
-      requestPermission();
+  useEffect(() => {
+    if (!messaging || !user?.uid || !notificationsEnabled) {
+      return;
     }
-  }, [messaging, notificationsEnabled]);
+
+    let cancelled = false;
+
+    const register = async () => {
+      if (hasRegisteredRef.current) {
+        return;
+      }
+
+      const token = await requestNotificationPermission(user.uid, messaging);
+      if (!cancelled && token) {
+        hasRegisteredRef.current = true;
+      }
+    };
+
+    register();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [messaging, notificationsEnabled, user?.uid]);
 
   useEffect(() => {
     if (messaging) {
-      const unsubscribe = onMessage(messaging, (payload) => {
-        console.log('Message received. ', payload);
-        toast({
-          title: payload.notification?.title,
-          description: payload.notification?.body,
-        });
-      });
+      const unsubscribe = setupForegroundMessageListener(
+        (payload) => {
+          toast({
+            title: payload.notification?.title ?? 'New update',
+            description: payload.notification?.body ?? '',
+          });
+        },
+        messaging
+      );
+
       return () => unsubscribe();
     }
   }, [messaging, toast]);

@@ -170,11 +170,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const toggleNotifications = async () => {
     const newStatus = !notificationsEnabled;
     
-    if (newStatus && currentUser) {
-      // Request permission and get FCM token
-      await requestNotificationPermission(currentUser.uid);
-    }
-    
+    // Note: PushNotifications component will handle token registration
+    // when notificationsEnabled becomes true
     setNotificationsEnabled(newStatus);
     localStorage.setItem('notificationsEnabled', JSON.stringify(newStatus));
   };

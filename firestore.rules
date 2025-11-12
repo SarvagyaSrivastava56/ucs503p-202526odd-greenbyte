@@ -104,7 +104,20 @@ service cloud.firestore {
                        request.resource.data.admins.size() > 0;
       allow delete: if isSuperAdmin();
       
-      // Team members: /societies/{societyId}/team/{memberId}
+      // Automation rules: /societies/{societyId}/automations/{ruleId}
+      match /automations/{ruleId} {
+        allow read: if isSignedIn();
+        allow create: if isSocietyAdminOf(societyId) &&
+                         validateString('name', 1, 200) &&
+                         request.resource.data.enabled is bool &&
+                         request.resource.data.trigger in ['rsvp_created', 'check_in', 'capacity_reached', 'before_event', 'after_event'] &&
+                         request.resource.data.action in ['send_thank_you', 'send_email', 'send_notification', 'close_registration', 'open_waitlist'];
+        allow update: if isSocietyAdminOf(societyId) &&
+                         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['trigger', 'action']));
+        allow delete: if isSocietyAdminOf(societyId);
+      }
+    
+    // Team members: /societies/{societyId}/team/{memberId}
       match /team/{memberId} {
         allow read: if isSignedIn();
         allow create: if isSocietyAdminOf(societyId) &&

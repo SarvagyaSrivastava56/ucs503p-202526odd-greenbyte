@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/popover"
 import { Switch } from '@/components/ui/switch';
 import { type Category, type Event } from '@/lib/types';
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -48,7 +48,6 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { saveEvent } from '@/lib/events';
 import { useAppContext } from '@/context/app-context';
-import Image from 'next/image';
 import { uploadImage } from '@/lib/storage';
 import { useFirebase } from '@/firebase';
 
@@ -94,6 +93,7 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
   const { currentUser } = useAppContext();
   const { user } = useFirebase();
   const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const defaultValues: Partial<EventFormValues> = React.useMemo(() => {
     if (eventToEdit) {
@@ -202,6 +202,93 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
       toast({ variant: 'destructive', title: 'Upload failed', description: err?.message || 'Please try again.' });
     }
   };
+  
+  const onDrop: React.DragEventHandler<HTMLDivElement> = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    let file: File | null = null;
+    if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+      const item = e.dataTransfer.items[0];
+      if (item.kind === 'file') {
+        const f = item.getAsFile();
+        if (f) file = f;
+      }
+    }
+    if (!file && e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      file = e.dataTransfer.files[0];
+    }
+    if (file) {
+      void handleBannerUpload(file);
+      return;
+    }
+    // Handle dragging from web pages (URL drops)
+    const urlFromUriList = e.dataTransfer.getData('text/uri-list');
+    const urlFromText = e.dataTransfer.getData('text/plain');
+    const htmlData = e.dataTransfer.getData('text/html');
+    let possibleUrl = urlFromUriList || urlFromText;
+    if (!possibleUrl && htmlData) {
+      // Try to extract <img src="..."> from dropped HTML
+      const match = htmlData.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/i);
+      if (match && match[1]) {
+        possibleUrl = match[1];
+      }
+    }
+    if (possibleUrl && /^https?:\/\//.test(possibleUrl)) {
+      const looksLikeImage = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(\?.*)?$/i.test(possibleUrl);
+      if (looksLikeImage) {
+        form.setValue('bannerUrl', possibleUrl, { shouldValidate: true });
+        toast({ title: 'Banner URL set', description: 'Image URL added from drop.' });
+      } else {
+        // Resolve via API
+        try {
+          const resp = await fetch(`/api/resolve-image?url=${encodeURIComponent(possibleUrl)}`);
+          const data = await resp.json();
+          if (resp.ok && data.image) {
+            form.setValue('bannerUrl', data.image, { shouldValidate: true });
+            toast({ title: 'Banner found', description: 'Extracted image from page.' });
+          } else {
+            toast({ variant: 'destructive', title: 'No image found', description: data.error || 'Try dropping the image itself or paste the image address.' });
+          }
+        } catch (err: any) {
+          toast({ variant: 'destructive', title: 'Resolve failed', description: err?.message || 'Could not fetch page.' });
+        }
+      }
+    }
+  };
+
+  const onDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    if (!dragActive) setDragActive(true);
+  };
+
+  const onDragEnter: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const onDragLeave: React.DragEventHandler<HTMLDivElement> = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  // Prevent browser from opening the dragged asset while dialog is open
+  useEffect(() => {
+    if (!open) return;
+    const prevent = (ev: DragEvent) => {
+      ev.preventDefault();
+    };
+    window.addEventListener('dragover', prevent);
+    window.addEventListener('drop', prevent);
+    return () => {
+      window.removeEventListener('dragover', prevent);
+      window.removeEventListener('drop', prevent);
+    };
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -251,17 +338,14 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
                   <FormLabel>Banner Image</FormLabel>
                   <div
                     className={cn(
-                      'rounded-md border border-dashed p-4 transition-colors',
+                      'rounded-md border border-dashed p-4 transition-colors cursor-pointer',
                       dragActive ? 'border-primary bg-primary/5' : 'border-border'
                     )}
-                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                    onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragActive(false);
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) { void handleBannerUpload(file); }
-                    }}
+                    onDragEnter={onDragEnter}
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                    onClick={() => fileInputRef.current?.click()}
                   >
                     <div className="flex flex-col md:flex-row gap-3 items-center">
                       <div className="flex-1 w-full">
@@ -274,6 +358,7 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
                         <input
                           type="file"
                           accept="image/*"
+                          ref={fileInputRef}
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) { void handleBannerUpload(file); }
@@ -282,12 +367,11 @@ export function CreateEventDialog({ children, eventToEdit }: { children: React.R
                       </div>
                     </div>
                     {z.string().url().safeParse(bannerUrl).success ? (
-                      <div className="mt-3 h-32 md:h-40 relative rounded overflow-hidden bg-muted">
-                        <Image
+                      <div className="mt-3 h-32 md:h-40 rounded overflow-hidden bg-muted">
+                        <img
                           src={bannerUrl}
                           alt="Banner preview"
-                          fill
-                          style={{ objectFit: 'cover' }}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                     ) : (
