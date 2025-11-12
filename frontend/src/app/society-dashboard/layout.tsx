@@ -27,7 +27,7 @@ const navigation = [
   { name: 'Overview', href: '/society-dashboard', icon: LayoutDashboard, exact: true },
   { name: 'Events', href: '/society-dashboard/events', icon: Calendar },
   { name: 'RSVPs & Attendees', href: '/society-dashboard/rsvps', icon: Users },
-  { name: 'Announcements', href: '/society-dashboard/announcements', icon: Megaphone },
+  // { name: 'Announcements', href: '/society-dashboard/announcements', icon: Megaphone },
   { name: 'Analytics', href: '/society-dashboard/analytics', icon: BarChart3 },
   // { name: 'Team', href: '/society-dashboard/team', icon: UserCog },
   // { name: 'Monetization', href: '/society-dashboard/monetization', icon: Ticket },
