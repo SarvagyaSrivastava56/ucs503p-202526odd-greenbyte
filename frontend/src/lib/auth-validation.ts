@@ -4,19 +4,14 @@
 
 // Configure allowed email domains for your college
 export const ALLOWED_EMAIL_DOMAINS = [
-  'campus.edu',
-  'student.campus.edu',
-  'society.campus.edu',
-  'example.com', // For testing/demo purposes
-  // Add your actual college domains here
+  'thapar.edu',
+  'society.thapar.edu',
+  // Add other thapar-specific subdomains here if needed
 ];
 
 // Society admin email patterns
 export const SOCIETY_EMAIL_PATTERNS = [
-  'society.campus.edu',
-  '@society.',
-  '.society@',
-  'society@example.com', // Test account
+  'society.thapar.edu',
 ];
 
 /**
@@ -59,9 +54,12 @@ export function validateCollegeEmail(email: string): {
   }
 
   if (!isCollegeEmail(email)) {
+    // Build a student-facing list that hides society-specific domains
+    const visibleDomains = ALLOWED_EMAIL_DOMAINS.filter(d => !d.includes('society.'));
+    const domainHint = visibleDomains.length > 0 ? visibleDomains.join(' or ') : 'thapar.edu';
     return { 
       valid: false, 
-      error: `Please use your college email address (${ALLOWED_EMAIL_DOMAINS.join(' or ')})` 
+      error: `Please use your college email address (${domainHint})` 
     };
   }
 

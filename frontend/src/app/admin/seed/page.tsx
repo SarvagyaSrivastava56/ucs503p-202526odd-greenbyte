@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { firestore } from '@/firebase';
-import { Loader2, Database } from 'lucide-react';
+import { Loader2, Database, Trash2 } from 'lucide-react';
 
 export default function SeedPage() {
   const [loading, setLoading] = useState(false);
@@ -141,6 +141,34 @@ export default function SeedPage() {
     }
   };
 
+  const clearAllEvents = async () => {
+    setLoading(true);
+    try {
+      const eventsRef = collection(firestore, 'events');
+      const querySnapshot = await getDocs(eventsRef);
+      
+      let deletedCount = 0;
+      for (const document of querySnapshot.docs) {
+        await deleteDoc(doc(firestore, 'events', document.id));
+        deletedCount++;
+      }
+
+      toast({
+        title: '🗑️ All Events Deleted!',
+        description: `Removed ${deletedCount} events from the database.`,
+      });
+    } catch (error: any) {
+      console.error('Error clearing events:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'Failed to clear events. Check console for details.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
       <Card className="max-w-2xl w-full">
@@ -180,6 +208,26 @@ export default function SeedPage() {
                 <>
                   <Database className="mr-2 h-5 w-5" />
                   Seed Database
+                </>
+              )}
+            </Button>
+
+            <Button
+              onClick={clearAllEvents}
+              disabled={loading}
+              variant="destructive"
+              size="lg"
+              className="w-full text-lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Clearing Events...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-5 w-5" />
+                  Clear All Events
                 </>
               )}
             </Button>

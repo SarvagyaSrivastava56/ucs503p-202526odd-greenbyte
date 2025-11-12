@@ -79,7 +79,7 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps, sponso
 
         toast({
           title: '🎉 RSVP Confirmed!',
-          description: `You're all set for ${eventTitle}. Check your QR code for check-in.`,
+          description: 'You are all set for ${eventTitle}. Check your QR code for check-in',
         });
 
         if (result.qrCodeUrl) {
@@ -263,4 +263,3 @@ export function RsvpButton({ eventId, eventTitle, capacity, currentRsvps, sponso
     </>
   );
 }
-

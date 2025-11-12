@@ -28,6 +28,7 @@ import { doc, setDoc, deleteDoc, collection, onSnapshot, addDoc, serverTimestamp
 import { firestore } from '@/firebase';
 import { createRsvp, cancelRsvp } from '@/lib/rsvp';
 import { SponsorAdModal } from '@/components/sponsor-ad-modal';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type ChatMessage = {
   user: {
@@ -61,6 +62,8 @@ export default function EventDetailContent({ id }: { id: string }) {
   const [isRsvping, setIsRsvping] = useState(false);
   const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [showQrDialog, setShowQrDialog] = useState(false);
 
   const { toast } = useToast();
 
@@ -88,11 +91,28 @@ export default function EventDetailContent({ id }: { id: string }) {
     if (!user || !id) return;
     
     const rsvpRef = doc(firestore, 'users', user.uid, 'rsvps', id);
-    const unsubscribe = onSnapshot(rsvpRef, (doc) => {
-      setHasRsvpd(doc.exists() && doc.data()?.status === 'rsvped');
+    const unsubscribe = onSnapshot(rsvpRef, (userRsvpSnap) => {
+      const exists = userRsvpSnap.exists();
+      const data = exists ? userRsvpSnap.data() : undefined;
+      const isGoing = !!data && (data as any).status === 'rsvped';
+      setHasRsvpd(isGoing);
     });
 
-    return () => unsubscribe();
+    return () => { unsubscribe(); };
+  }, [user, id]);
+
+  // Listen to event RSVP doc for QR code URL
+  useEffect(() => {
+    if (!user || !id) return;
+
+    const eventRsvpRef = doc(firestore, 'events', id, 'rsvps', user.uid);
+    const unsubscribe = onSnapshot(eventRsvpRef, (evSnap) => {
+      const data = evSnap.data();
+      const url = data && (data as any).qrCodeUrl ? (data as any).qrCodeUrl as string : null;
+      setQrCodeUrl(url);
+    });
+
+    return () => { unsubscribe(); };
   }, [user, id]);
 
   // Check favorite status
@@ -137,12 +157,12 @@ export default function EventDetailContent({ id }: { id: string }) {
       if (result.status === 'waitlisted') {
         toast({
           title: '📋 Added to Waitlist',
-          description: `Event is at capacity. You've been added to the waitlist for ${event.title}.`,
+          description: 'Event is at capacity. You are added to the waitlist for ${event.title}.',
         });
       } else {
         toast({
           title: '🎉 RSVP Successful!',
-          description: `You're going to ${event.title}.`,
+          description: 'You are going to ${event.title}.',
         });
       }
       setTimeout(() => setShowConfetti(false), 3000);
@@ -188,7 +208,7 @@ export default function EventDetailContent({ id }: { id: string }) {
       setHasRsvpd(false);
       toast({
         title: 'RSVP Withdrawn',
-        description: `You have withdrawn your registration for ${event.title}.`,
+        description: 'You have withdrawn your registration for ${event.title}.',
       });
     } catch (error: any) {
       toast({
@@ -211,7 +231,7 @@ export default function EventDetailContent({ id }: { id: string }) {
         await deleteDoc(favoriteRef);
         toast({
           title: 'Removed from Favorites',
-          description: `${event.title} has been removed from your favorites.`,
+          description: 'Event has been removed from your favorites.',
         });
       } else {
         await setDoc(favoriteRef, {
@@ -220,7 +240,7 @@ export default function EventDetailContent({ id }: { id: string }) {
         });
         toast({
           title: 'Added to Favorites',
-          description: `${event.title} has been added to your favorites.`,
+          description:  'Event has been added to your favorites.',
         });
       }
     } catch (error) {
@@ -235,7 +255,7 @@ export default function EventDetailContent({ id }: { id: string }) {
   const handleAddToCalendar = () => {
     toast({
         title: 'Added to Calendar',
-        description: `${event.title} has been added to your calendar.`,
+        description: `${event?.title} has been added to your calendar.`,
     });
   };
 
@@ -373,8 +393,8 @@ export default function EventDetailContent({ id }: { id: string }) {
             </div>
             {hasRsvpd ? (
               <div className="flex gap-3">
-                <Button className="flex-1 text-lg h-12" disabled>
-                  You're going!
+                <Button className="flex-1 text-lg h-12" onClick={() => setShowQrDialog(true)} disabled={!qrCodeUrl}>
+                  {qrCodeUrl ? "View QR" : "Generating QR..."}
                 </Button>
                 <Button variant="outline" className="flex-1 text-lg h-12" onClick={handleWithdraw} disabled={isCancelling}>
                   {isCancelling ? 'Withdrawing...' : 'Withdraw'}
@@ -425,6 +445,22 @@ export default function EventDetailContent({ id }: { id: string }) {
             </div>
           </div>
         </div>
+        <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Your Event QR Code</DialogTitle>
+              <DialogDescription>Show this QR at check-in to verify your RSVP.</DialogDescription>
+            </DialogHeader>
+            {qrCodeUrl ? (
+              <div className="flex flex-col items-center gap-4 py-4">
+                <Image src={qrCodeUrl} alt="Event QR Code" width={300} height={300} className="border-4 border-primary rounded-lg" />
+                <p className="text-sm text-muted-foreground text-center">Tip: Save or screenshot your QR for faster entry.</p>
+              </div>
+            ) : (
+              <div className="py-6 text-center text-sm text-muted-foreground">QR not available yet. Try again in a moment.</div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       {event?.sponsorAd?.videoUrl && (

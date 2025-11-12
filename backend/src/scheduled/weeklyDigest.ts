@@ -35,8 +35,14 @@ export const weeklyDigest = functions.pubsub
 
       const allEvents = eventsSnapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data(),
-      })) as any[];
+        ...(doc.data() as any),
+      })) as Array<{
+        id: string;
+        title?: string;
+        category?: string;
+        tags?: string[];
+        [key: string]: any;
+      }>;
 
       console.log(`Found ${allEvents.length} upcoming events`);
 
@@ -53,8 +59,8 @@ export const weeklyDigest = functions.pubsub
 
         // Filter events matching user interests
         const matchedEvents = allEvents.filter((event) => {
-          const eventCategory = event.category || '';
-          const eventTags = event.tags || [];
+          const eventCategory = (event.category as string) || '';
+          const eventTags = (event.tags as string[]) || [];
           return (
             interests.includes(eventCategory) ||
             eventTags.some((tag: string) => interests.includes(tag))
@@ -66,7 +72,7 @@ export const weeklyDigest = functions.pubsub
         }
 
         // Send digest notification
-        const eventTitles = matchedEvents.slice(0, 3).map((e) => e.title).join(', ');
+        const eventTitles = matchedEvents.slice(0, 3).map((e) => e.title || '').join(', ');
         const message: admin.messaging.MulticastMessage = {
           tokens: deviceTokens,
           notification: {

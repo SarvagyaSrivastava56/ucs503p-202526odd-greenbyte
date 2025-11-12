@@ -16,9 +16,9 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
   // Determine role based on email domain
   let role: 'student' | 'society_admin' | 'super_admin' = 'student';
   
-  if (email.endsWith('@admin.campus.edu')) {
+  if (email.endsWith('@admin.thapar.edu')) {
     role = 'super_admin';
-  } else if (email.endsWith('@society.campus.edu') || email === 'society@example.com') {
+  } else if (email.endsWith('@society.thapar.edu') || email === 'society@example.com') {
     role = 'society_admin';
   }
 

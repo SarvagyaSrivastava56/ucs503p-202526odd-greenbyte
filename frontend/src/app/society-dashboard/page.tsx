@@ -10,7 +10,6 @@ import {
   TrendingUp,
   UserCheck,
   Megaphone,
-  Eye,
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react';
@@ -33,7 +32,6 @@ interface DashboardStats {
   totalRSVPs: number;
   rsvpsThisWeek: number;
   totalCheckIns: number;
-  totalViews: number;
   waitlistedCount: number;
 }
 
@@ -49,7 +47,6 @@ export default function SocietyDashboardPage() {
     totalRSVPs: 0,
     rsvpsThisWeek: 0,
     totalCheckIns: 0,
-    totalViews: 0,
     waitlistedCount: 0,
   });
   
@@ -98,7 +95,6 @@ export default function SocietyDashboardPage() {
       
       const totalRSVPs = events.reduce((acc, e) => acc + (e.counters?.rsvpCount || 0), 0);
       const totalCheckIns = events.reduce((acc, e) => acc + (e.counters?.checkIns || 0), 0);
-      const totalViews = events.reduce((acc, e) => acc + (e.counters?.views || 0), 0);
       
       setStats({
         totalEvents: events.length,
@@ -107,7 +103,6 @@ export default function SocietyDashboardPage() {
         totalRSVPs,
         rsvpsThisWeek: 0, // Would need RSVPs collection to calculate
         totalCheckIns,
-        totalViews,
         waitlistedCount: 0, // Would need RSVPs collection to calculate
       });
       
@@ -157,7 +152,7 @@ export default function SocietyDashboardPage() {
               {todayEvents.map((event) => (
                 <Link 
                   key={event.id} 
-                  href={`/society-dashboard/events/${event.id}`}
+                  href={`/events/${event.id}`}
                   className="flex items-center justify-between p-3 rounded-lg bg-background hover:bg-accent transition-colors"
                 >
                   <div>
@@ -218,18 +213,7 @@ export default function SocietyDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Views</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalViews}</div>
-            <p className="text-xs text-muted-foreground">
-              Across {stats.totalEvents} events
-            </p>
-          </CardContent>
-        </Card>
+        
       </div>
 
       {/* Recent Events */}
@@ -290,14 +274,7 @@ export default function SocietyDashboardPage() {
                     : 0}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Avg. Views/Event</span>
-                <span className="font-medium">
-                  {stats.totalEvents > 0 
-                    ? Math.round(stats.totalViews / stats.totalEvents) 
-                    : 0}
-                </span>
-              </div>
+              
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Attendance Rate</span>
                 <span className="font-medium">
