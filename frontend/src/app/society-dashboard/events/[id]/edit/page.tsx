@@ -34,6 +34,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import { useAppContext } from '@/context/app-context';
+import { QRCheckIn } from '@/components/qr-checkin';
 
 export default function EditEventPage() {
   const params = useParams();
@@ -516,6 +517,17 @@ export default function EditEventPage() {
                 <Upload className="h-4 w-4 mr-2" />
                 Change Banner
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* QR Check-in */}
+          <Card>
+            <CardHeader>
+              <CardTitle>QR Check-in</CardTitle>
+              <CardDescription>Scan attendee QR codes to verify and check-in</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <QRCheckIn event={event} />
             </CardContent>
           </Card>
         </div>

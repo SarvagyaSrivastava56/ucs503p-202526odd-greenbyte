@@ -17,6 +17,7 @@ import {
   Ticket,
   Zap,
   ChevronRight,
+  Scan,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Overview', href: '/society-dashboard', icon: LayoutDashboard, exact: true },
   { name: 'Events', href: '/society-dashboard/events', icon: Calendar },
   { name: 'RSVPs & Attendees', href: '/society-dashboard/rsvps', icon: Users },
+  { name: 'Scan QR', href: '/society-dashboard/scanner', icon: Scan },
   { name: 'Announcements', href: '/society-dashboard/announcements', icon: Megaphone },
   { name: 'Analytics', href: '/society-dashboard/analytics', icon: BarChart3 },
   // { name: 'Team', href: '/society-dashboard/team', icon: UserCog },

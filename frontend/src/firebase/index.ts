@@ -3,9 +3,10 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getMessaging, Messaging } from 'firebase/messaging';
+// Production setup: no emulator connections
 
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
@@ -30,15 +31,18 @@ if (!getApps().length) {
 }
 
 auth = getAuth(firebaseApp);
-firestore = getFirestore(firebaseApp);
+firestore = initializeFirestore(firebaseApp, {
+    experimentalForceLongPolling: true,
+    useFetchStreams: false,
+});
 storage = getStorage(firebaseApp);
 if (typeof window !== 'undefined') {
     messaging = getMessaging(firebaseApp);
 }
 
+// Note: Emulator connections removed for production
 
 export { firebaseApp, auth, firestore, storage, messaging };
-
 
 export * from './provider';
 export * from './client-provider';

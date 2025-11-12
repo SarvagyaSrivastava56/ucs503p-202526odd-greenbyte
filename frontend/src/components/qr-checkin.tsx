@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Event } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
+import { Textarea } from '@/components/ui/textarea';
+import { firebaseApp } from '@/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import dynamic from 'next/dynamic';
+const QrScanner: any = dynamic(
+  async () => {
+    const mod: any = await import('@yudiel/react-qr-scanner');
+    return mod.QrScanner || mod.default;
+  },
+  { ssr: false }
+);
 
 interface QRCheckInProps {
   event: Event;
@@ -25,11 +36,15 @@ export function QRCheckIn({ event }: QRCheckInProps) {
   const { toast } = useToast();
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [scanning, setScanning] = useState(false);
+  const [inputPayload, setInputPayload] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const [recentCheckIns, setRecentCheckIns] = useState<Array<{
     id: string;
     userName: string;
     time: string;
   }>>([]);
+  const processingRef = useRef(false);
+  const [scanStatus, setScanStatus] = useState<null | { ok: boolean; message: string }>(null);
 
   useEffect(() => {
     // Generate QR code for the event
@@ -72,29 +87,85 @@ export function QRCheckIn({ event }: QRCheckInProps) {
     });
   };
 
-  const handleScan = (data: string) => {
+  const verifyQrManually = async () => {
+    if (!inputPayload) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
+    let parsed: any;
     try {
-      const parsed = JSON.parse(data);
-      
-      if (parsed.eventId === event.id) {
-        // Successful check-in
-        setRecentCheckIns(prev => [{
-          id: Math.random().toString(),
-          userName: 'John Doe', // Would come from the scanned data
-          time: new Date().toLocaleTimeString(),
-        }, ...prev.slice(0, 9)]);
-
-        toast({
-          title: 'Check-in Successful',
-          description: 'Attendee has been checked in',
-        });
-      }
-    } catch (error) {
+      parsed = JSON.parse(inputPayload);
+    } catch (e) {
       toast({
-        title: 'Invalid QR Code',
-        description: 'This QR code is not valid for this event',
+        title: 'Invalid Payload',
+        description: 'Paste the exact QR payload (JSON) from the attendee.',
         variant: 'destructive',
       });
+      setScanStatus({ ok: false, message: 'Invalid QR: not JSON' });
+      processingRef.current = false;
+      return;
+    }
+
+    if (!parsed?.eventId || !parsed?.userId) {
+      toast({
+        title: 'Missing Fields',
+        description: 'Payload must include eventId and userId.',
+        variant: 'destructive',
+      });
+      setScanStatus({ ok: false, message: 'Invalid QR: missing eventId/userId' });
+      processingRef.current = false;
+      return;
+    }
+
+    if (parsed.eventId !== event.id) {
+      toast({
+        title: 'Wrong Event',
+        description: 'This QR belongs to a different event.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const functions = getFunctions(firebaseApp);
+      const checkInVerify = httpsCallable(functions, 'checkInVerify');
+      const res: any = await checkInVerify({
+        eventId: event.id,
+        userId: parsed.userId,
+        qrPayload: inputPayload,
+      });
+
+      const data = res?.data as { success: boolean; alreadyCheckedIn?: boolean; checkInAt?: string; message?: string };
+      if (data?.success) {
+        setRecentCheckIns(prev => [{
+          id: parsed.userId,
+          userName: parsed.userId,
+          time: data.checkInAt ? new Date(data.checkInAt).toLocaleTimeString() : new Date().toLocaleTimeString(),
+        }, ...prev.slice(0, 9)]);
+        toast({
+          title: data.alreadyCheckedIn ? 'Already Checked In' : 'Check-in Successful',
+          description: data.message || 'Attendee verified and checked in.',
+        });
+        setInputPayload('');
+        setScanStatus({ ok: true, message: data.alreadyCheckedIn ? 'Already checked in' : 'Check-in successful' });
+      } else {
+        toast({
+          title: 'Verification Failed',
+          description: data?.message || 'Could not verify QR.',
+          variant: 'destructive',
+        });
+        setScanStatus({ ok: false, message: data?.message || 'Verification failed' });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Verification Error',
+        description: error?.message || 'Failed to verify QR. Ensure you are signed in as a society admin.',
+        variant: 'destructive',
+      });
+      setScanStatus({ ok: false, message: 'Verification error' });
+    } finally {
+      setVerifying(false);
+      processingRef.current = false;
     }
   };
 
@@ -194,15 +265,50 @@ export function QRCheckIn({ event }: QRCheckInProps) {
                     </Button>
                   </div>
                 ) : (
-                  <div className="text-center space-y-4">
-                    <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
-                      <p className="text-muted-foreground">Camera view would appear here</p>
+                  <div className="w-full space-y-4">
+                    <div className="mx-auto max-w-sm overflow-hidden rounded-lg border">
+                      <QrScanner
+                        onDecode={(text: string) => {
+                          setScanning(false);
+                          setInputPayload(text);
+                          // Debounced verify to avoid double-calls from rapid decodes
+                          setTimeout(() => {
+                            void verifyQrManually();
+                          }, 50);
+                        }}
+                        onError={(e: any) => { /* ignore frame decode errors */ }}
+                        constraints={{ facingMode: 'environment' }}
+                        styles={{ container: { width: '100%' } }}
+                      />
                     </div>
-                    <Button variant="outline" onClick={() => setScanning(false)}>
-                      Stop Scanner
-                    </Button>
+                    <div className="text-center">
+                      <Button variant="outline" onClick={() => setScanning(false)}>
+                        Stop Scanner
+                      </Button>
+                    </div>
                   </div>
                 )}
+              </div>
+
+              {scanStatus && (
+                <div className={`p-3 rounded-md ${scanStatus.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+                  {scanStatus.message}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Or paste QR payload (from attendee QR) to verify and check in</p>
+                <Textarea
+                  value={inputPayload}
+                  onChange={(e) => setInputPayload(e.target.value)}
+                  placeholder='{"eventId":"...","userId":"...","timestamp":...}'
+                  className="min-h-24"
+                />
+                <div className="flex justify-end">
+                  <Button onClick={verifyQrManually} disabled={verifying || !inputPayload}>
+                    {verifying ? 'Verifying...' : 'Verify & Check-in'}
+                  </Button>
+                </div>
               </div>
 
               {/* Recent Check-ins */}

@@ -4,7 +4,7 @@ import * as admin from 'firebase-admin';
 interface CheckInRequest {
   eventId: string;
   userId: string;
-  qrCode: string;
+  qrPayload: string;
 }
 
 /**
@@ -20,12 +20,12 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
     );
   }
 
-  const { eventId, userId, qrCode } = data;
+  const { eventId, userId, qrPayload } = data;
 
-  if (!eventId || !userId || !qrCode) {
+  if (!eventId || !userId || !qrPayload) {
     throw new functions.https.HttpsError(
       'invalid-argument',
-      'Missing required parameters: eventId, userId, qrCode'
+      'Missing required parameters: eventId, userId, qrPayload'
     );
   }
 
@@ -85,12 +85,20 @@ export const checkInVerify = functions.https.onCall(async (data: CheckInRequest,
 
     const rsvpData = rsvpDoc.data()!;
 
-    // Verify QR code matches
-    if (rsvpData.qrCodeUrl !== qrCode) {
-      throw new functions.https.HttpsError(
-        'permission-denied',
-        'Invalid QR code'
-      );
+    // Parse and validate QR payload
+    let parsed: any;
+    try {
+      parsed = JSON.parse(qrPayload);
+    } catch (e) {
+      throw new functions.https.HttpsError('invalid-argument', 'QR payload is not valid JSON');
+    }
+
+    if (!parsed || parsed.eventId !== eventId || parsed.userId !== userId) {
+      throw new functions.https.HttpsError('permission-denied', 'QR code does not match this user or event');
+    }
+
+    if (!rsvpData.qrPayload || rsvpData.qrPayload !== qrPayload) {
+      throw new functions.https.HttpsError('permission-denied', 'Invalid or outdated QR code');
     }
 
     // Check if already checked in (idempotent)

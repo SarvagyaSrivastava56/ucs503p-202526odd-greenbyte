@@ -33,7 +33,14 @@ export const weeklyDigest = functions.pubsub
         .limit(50)
         .get();
 
-      const allEvents = eventsSnapshot.docs.map((doc) => ({
+      type EventData = {
+        id: string;
+        category?: string;
+        tags?: string[];
+        title?: string;
+      };
+
+      const allEvents: EventData[] = eventsSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));

@@ -87,7 +87,8 @@ export type Rsvp = {
   userId: string;
   eventId: string;
   status: RsvpStatus;
-  qrCode?: string;
+  qrCodeUrl?: string;
+  qrPayload?: string;
   checkInAt?: string; // ISO 8601 format
   createdAt?: string;
   updatedAt?: string;
